@@ -1,3 +1,248 @@
+// --- MoneyGrizz App Logic ---
+let currentMode = 'personal';
+let data = {
+    personal: JSON.parse(localStorage.getItem('moneygrizz_personal')) || [],
+    umkm: JSON.parse(localStorage.getItem('moneygrizz_umkm')) || []
+};
+
+let chartInstance = null;
+
+const categories = {
+    personal: [
+        { id: 'pemasukan', label: 'Pemasukan (Gaji)', color: '#10b981', type: 'income' },
+        { id: 'makanan', label: 'Konsumsi/Makanan', color: '#f59e0b', type: 'expense' },
+        { id: 'transport', label: 'Transportasi', color: '#3b82f6', type: 'expense' },
+        { id: 'belanja', label: 'Belanja/Lifestyle', color: '#8b5cf6', type: 'expense' },
+        { id: 'tagihan', label: 'Cicilan & Tagihan', color: '#ef4444', type: 'expense' },
+        { id: 'lainnya', label: 'Kebutuhan Lainnya', color: '#64748b', type: 'expense' }
+    ],
+    umkm: [
+        { id: 'penjualan', label: 'Penjualan (Omset)', color: '#10b981', type: 'income' },
+        { id: 'hpp', label: 'Stok Barang (Modal)', color: '#ef4444', type: 'expense' },
+        { id: 'operasional', label: 'Operasional Toko', color: '#f59e0b', type: 'expense' },
+        { id: 'gaji', label: 'Gaji Tim/Karyawan', color: '#8b5cf6', type: 'expense' },
+        { id: 'iklan', label: 'Marketing/Iklan', color: '#3b82f6', type: 'expense' }
+    ]
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('date-now').innerText = today.toLocaleDateString('id-ID', options);
+    
+    lucide.createIcons();
+    initChart();
+    updateUI();
+    document.getElementById('date').valueAsDate = today;
+});
+
+function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById('view-title').innerText = mode === 'personal' ? 'Pencatatan Pribadi' : 'Pencatatan UMKM';
+    
+    // Update Nav UI
+    const modes = ['personal', 'umkm'];
+    modes.forEach(m => {
+        const sideBtn = document.getElementById(`btn-side-${m}`);
+        const mobBtn = document.getElementById(`btn-mob-${m}`);
+        if (m === mode) {
+            sideBtn.classList.add('active-nav');
+            sideBtn.classList.remove('text-slate-400', 'hover:bg-slate-800');
+            mobBtn.classList.replace('text-slate-500', 'text-amber-500');
+        } else {
+            sideBtn.classList.remove('active-nav');
+            sideBtn.classList.add('text-slate-400', 'hover:bg-slate-800');
+            mobBtn.classList.replace('text-amber-500', 'text-slate-500');
+        }
+    });
+
+    updateUI();
+}
+
+function updateUI() {
+    renderCategories();
+    renderSummary();
+    renderHistory();
+    updateChart();
+    lucide.createIcons();
+}
+
+function renderCategories() {
+    const select = document.getElementById('category');
+    select.innerHTML = categories[currentMode].map(cat => 
+        `<option value="${cat.id}">${cat.label}</option>`
+    ).join('');
+    document.getElementById('note-label').innerText = currentMode === 'personal' ? 'Catatan' : 'Pelanggan/Vendor';
+}
+
+function renderSummary() {
+    const summaryContainer = document.getElementById('dashboard-summary');
+    const list = data[currentMode];
+    
+    if (currentMode === 'personal') {
+        const income = list.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const expense = list.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        summaryContainer.innerHTML = `
+            ${createCard('Saldo Saat Ini', income - expense, 'wallet', 'text-amber-500')}
+            ${createCard('Total Pemasukan', income, 'arrow-up-circle', 'text-emerald-500')}
+            ${createCard('Total Pengeluaran', expense, 'arrow-down-circle', 'text-rose-500')}
+        `;
+    } else {
+        const revenue = list.filter(t => t.catId === 'penjualan').reduce((sum, t) => sum + t.amount, 0);
+        const costs = list.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        summaryContainer.innerHTML = `
+            ${createCard('Keuntungan Bersih', revenue - costs, 'trending-up', 'text-emerald-500')}
+            ${createCard('Omset Penjualan', revenue, 'banknote', 'text-amber-500')}
+            ${createCard('Total Biaya/HPP', costs, 'shopping-cart', 'text-rose-500')}
+        `;
+    }
+    lucide.createIcons();
+}
+
+function createCard(title, amount, icon, colorClass) {
+    return `
+        <div class="glass-card p-7 rounded-[2rem] hover:border-amber-500/30 transition-all group">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-4 bg-slate-800 rounded-2xl group-hover:bg-amber-600/10 transition-colors">
+                    <i data-lucide="${icon}" class="${colorClass} w-6 h-6"></i>
+                </div>
+            </div>
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">${title}</p>
+            <h3 class="text-2xl font-black mt-2 tracking-tight">Rp ${amount.toLocaleString('id-ID')}</h3>
+        </div>
+    `;
+}
+
+function renderHistory() {
+    const container = document.getElementById('history-list');
+    const list = [...data[currentMode]].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-16 opacity-30">
+                <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto mb-4"></i>
+                <p class="text-sm font-bold uppercase tracking-widest">Belum ada jejak transaksi</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = list.map(t => {
+        const cat = [...categories.personal, ...categories.umkm].find(c => c.id === t.catId);
+        const isExpense = t.type === 'expense';
+        return `
+            <div class="flex items-center justify-between p-5 rounded-3xl bg-slate-800/20 border border-slate-800 hover:bg-slate-800/40 transition-all">
+                <div class="flex items-center gap-5">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center ${isExpense ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}">
+                        <i data-lucide="${isExpense ? 'arrow-down-right' : 'arrow-up-right'}" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-slate-100">${cat ? cat.label : 'Transaksi'}</p>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">${t.date} • ${t.note || '-'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <p class="font-black text-lg ${isExpense ? 'text-rose-400' : 'text-emerald-400'}">
+                        ${isExpense ? '-' : '+'} ${t.amount.toLocaleString('id-ID')}
+                    </p>
+                    <button onclick="deleteTransaction('${t.id}')" class="p-2 text-slate-700 hover:text-rose-500 transition-all">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    lucide.createIcons();
+}
+
+document.getElementById('transaction-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const amount = parseInt(document.getElementById('amount').value);
+    const catId = document.getElementById('category').value;
+    const catObj = categories[currentMode].find(c => c.id === catId);
+    
+    const newTransaction = {
+        id: Date.now().toString(),
+        amount,
+        catId,
+        type: catObj.type,
+        date: document.getElementById('date').value,
+        note: document.getElementById('note').value
+    };
+    
+    data[currentMode].push(newTransaction);
+    saveData();
+    updateUI();
+    e.target.reset();
+    document.getElementById('date').valueAsDate = new Date();
+});
+
+function deleteTransaction(id) {
+    if(confirm('Hapus record ini?')) {
+        data[currentMode] = data[currentMode].filter(t => t.id !== id);
+        saveData();
+        updateUI();
+    }
+}
+
+function clearHistory() {
+    if(confirm('Hapus seluruh data di mode ini? Data yang dihapus tidak bisa dikembalikan.')) {
+        data[currentMode] = [];
+        saveData();
+        updateUI();
+    }
+}
+
+function saveData() {
+    localStorage.setItem(`moneygrizz_${currentMode}`, JSON.stringify(data[currentMode]));
+}
+
+function initChart() {
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: '600', size: 11 } } }
+            },
+            cutout: '75%'
+        }
+    });
+}
+
+function updateChart() {
+    const list = data[currentMode].filter(t => t.type === 'expense');
+    const grouped = {};
+    list.forEach(t => {
+        const cat = categories[currentMode].find(c => c.id === t.catId);
+        grouped[cat.label] = (grouped[cat.label] || 0) + t.amount;
+    });
+
+    chartInstance.data.labels = Object.keys(grouped);
+    chartInstance.data.datasets[0].data = Object.values(grouped);
+    chartInstance.data.datasets[0].backgroundColor = Object.keys(grouped).map(l => 
+        [...categories.personal, ...categories.umkm].find(c => c.label === l).color
+    );
+    chartInstance.update();
+}
+
+// PWA Prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installApp').classList.remove('hidden');
+});
+
+document.getElementById('installApp').addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt = null;
+    }
+});
+
 {
   "name": "MoneyGrizz Financial master",
   "short_name": "MoneyGrizz",
