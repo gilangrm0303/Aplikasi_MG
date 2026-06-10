@@ -1,262 +1,644 @@
-// --- MoneyGrizz App Logic ---
-let currentMode = 'personal';
-let data = {
-    personal: JSON.parse(localStorage.getItem('moneygrizz_personal')) || [],
-    umkm: JSON.parse(localStorage.getItem('moneygrizz_umkm')) || []
-};
-
-let chartInstance = null;
-
-const categories = {
-    personal: [
-        { id: 'pemasukan', label: 'Pemasukan (Gaji)', color: '#10b981', type: 'income' },
-        { id: 'makanan', label: 'Konsumsi/Makanan', color: '#f59e0b', type: 'expense' },
-        { id: 'transport', label: 'Transportasi', color: '#3b82f6', type: 'expense' },
-        { id: 'belanja', label: 'Belanja/Lifestyle', color: '#8b5cf6', type: 'expense' },
-        { id: 'tagihan', label: 'Cicilan & Tagihan', color: '#ef4444', type: 'expense' },
-        { id: 'lainnya', label: 'Kebutuhan Lainnya', color: '#64748b', type: 'expense' }
-    ],
-    umkm: [
-        { id: 'penjualan', label: 'Penjualan (Omset)', color: '#10b981', type: 'income' },
-        { id: 'hpp', label: 'Stok Barang (Modal)', color: '#ef4444', type: 'expense' },
-        { id: 'operasional', label: 'Operasional Toko', color: '#f59e0b', type: 'expense' },
-        { id: 'gaji', label: 'Gaji Tim/Karyawan', color: '#8b5cf6', type: 'expense' },
-        { id: 'iklan', label: 'Marketing/Iklan', color: '#3b82f6', type: 'expense' }
-    ]
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    const today = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('date-now').innerText = today.toLocaleDateString('id-ID', options);
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoneyGrizz | Premium Finance Tracker</title>
     
-    lucide.createIcons();
-    initChart();
-    updateUI();
-    document.getElementById('date').valueAsDate = today;
-});
-
-function switchMode(mode) {
-    currentMode = mode;
-    document.getElementById('view-title').innerText = mode === 'personal' ? 'Pencatatan Pribadi' : 'Pencatatan UMKM';
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2454/2454282.png">
     
-    // Update Nav UI
-    const modes = ['personal', 'umkm'];
-    modes.forEach(m => {
-        const sideBtn = document.getElementById(`btn-side-${m}`);
-        const mobBtn = document.getElementById(`btn-mob-${m}`);
-        if (m === mode) {
-            sideBtn.classList.add('active-nav');
-            sideBtn.classList.remove('text-slate-400', 'hover:bg-slate-800');
-            mobBtn.classList.replace('text-slate-500', 'text-amber-500');
-        } else {
-            sideBtn.classList.remove('active-nav');
-            sideBtn.classList.add('text-slate-400', 'hover:bg-slate-800');
-            mobBtn.classList.replace('text-amber-500', 'text-slate-500');
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#d97706',
+                        accentHover: '#b45309',
+                        success: '#10b981',
+                        danger: '#b91c1c',
+                        canvas: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
         }
-    });
+    </script>
 
-    updateUI();
-}
+    <style>
+        body { background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .sidebar-active { border-right: 4px solid #d97706; background-color: #1e293b; color: white; }
+        .nav-item-active { color: #d97706; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="font-sans text-slate-800">
 
-function updateUI() {
-    renderCategories();
-    renderSummary();
-    renderHistory();
-    updateChart();
-    lucide.createIcons();
-}
-
-function renderCategories() {
-    const select = document.getElementById('category');
-    select.innerHTML = categories[currentMode].map(cat => 
-        `<option value="${cat.id}">${cat.label}</option>`
-    ).join('');
-    document.getElementById('note-label').innerText = currentMode === 'personal' ? 'Catatan' : 'Pelanggan/Vendor';
-}
-
-function renderSummary() {
-    const summaryContainer = document.getElementById('dashboard-summary');
-    const list = data[currentMode];
-    
-    if (currentMode === 'personal') {
-        const income = list.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-        const expense = list.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-        summaryContainer.innerHTML = `
-            ${createCard('Saldo Saat Ini', income - expense, 'wallet', 'text-amber-500')}
-            ${createCard('Total Pemasukan', income, 'arrow-up-circle', 'text-emerald-500')}
-            ${createCard('Total Pengeluaran', expense, 'arrow-down-circle', 'text-rose-500')}
-        `;
-    } else {
-        const revenue = list.filter(t => t.catId === 'penjualan').reduce((sum, t) => sum + t.amount, 0);
-        const costs = list.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-        summaryContainer.innerHTML = `
-            ${createCard('Keuntungan Bersih', revenue - costs, 'trending-up', 'text-emerald-500')}
-            ${createCard('Omset Penjualan', revenue, 'banknote', 'text-amber-500')}
-            ${createCard('Total Biaya/HPP', costs, 'shopping-cart', 'text-rose-500')}
-        `;
-    }
-    lucide.createIcons();
-}
-
-function createCard(title, amount, icon, colorClass) {
-    return `
-        <div class="glass-card p-7 rounded-[2rem] hover:border-amber-500/30 transition-all group">
-            <div class="flex justify-between items-start mb-4">
-                <div class="p-4 bg-slate-800 rounded-2xl group-hover:bg-amber-600/10 transition-colors">
-                    <i data-lucide="${icon}" class="${colorClass} w-6 h-6"></i>
-                </div>
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="fixed left-0 top-0 h-screen w-64 bg-primary text-slate-300 hidden md:flex flex-col z-50">
+        <div class="p-6 flex items-center space-x-3">
+            <div class="w-10 h-10 bg-accent rounded-xl flex items-center justify-center text-white text-xl">
+                <i class="fas fa-bear-waving-front"></i>
             </div>
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">${title}</p>
-            <h3 class="text-2xl font-black mt-2 tracking-tight">Rp ${amount.toLocaleString('id-ID')}</h3>
+            <h1 class="text-xl font-bold tracking-tight text-white">Money<span class="text-accent">Grizz</span></h1>
         </div>
-    `;
-}
+        
+        <nav class="mt-6 flex-1">
+            <button onclick="switchTab('personal')" class="nav-btn w-full flex items-center px-6 py-4 hover:bg-secondary transition-all" id="btn-personal">
+                <i class="fas fa-user-shield w-8"></i> Personal
+            </button>
+            <button onclick="switchTab('umkm')" class="nav-btn w-full flex items-center px-6 py-4 hover:bg-secondary transition-all" id="btn-umkm">
+                <i class="fas fa-store w-8"></i> UMKM Bisnis
+            </button>
+            <button onclick="switchTab('settings')" class="nav-btn w-full flex items-center px-6 py-4 hover:bg-secondary transition-all" id="btn-settings">
+                <i class="fas fa-cog w-8"></i> Pengaturan
+            </button>
+        </nav>
 
-function renderHistory() {
-    const container = document.getElementById('history-list');
-    const list = [...data[currentMode]].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    if (list.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-16 opacity-30">
-                <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto mb-4"></i>
-                <p class="text-sm font-bold uppercase tracking-widest">Belum ada jejak transaksi</p>
-            </div>`;
-        return;
-    }
+        <div class="p-6 text-xs text-slate-500 border-t border-slate-700">
+            &copy; 2024 MoneyGrizz v1.0 <br> Offline-Ready PWA
+        </div>
+    </aside>
 
-    container.innerHTML = list.map(t => {
-        const cat = [...categories.personal, ...categories.umkm].find(c => c.id === t.catId);
-        const isExpense = t.type === 'expense';
-        return `
-            <div class="flex items-center justify-between p-5 rounded-3xl bg-slate-800/20 border border-slate-800 hover:bg-slate-800/40 transition-all">
-                <div class="flex items-center gap-5">
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center ${isExpense ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}">
-                        <i data-lucide="${isExpense ? 'arrow-down-right' : 'arrow-up-right'}" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <p class="font-bold text-slate-100">${cat ? cat.label : 'Transaksi'}</p>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">${t.date} • ${t.note || '-'}</p>
-                    </div>
+    <!-- MOBILE BOTTOM NAV -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center md:hidden z-50 pb-safe shadow-2xl">
+        <button onclick="switchTab('personal')" class="flex flex-col items-center py-3 px-4 text-slate-400" id="m-btn-personal">
+            <i class="fas fa-user-shield text-xl"></i>
+            <span class="text-[10px] mt-1 font-medium">Personal</span>
+        </button>
+        <button onclick="switchTab('umkm')" class="flex flex-col items-center py-3 px-4 text-slate-400" id="m-btn-umkm">
+            <i class="fas fa-store text-xl"></i>
+            <span class="text-[10px] mt-1 font-medium">UMKM</span>
+        </button>
+        <button onclick="switchTab('settings')" class="flex flex-col items-center py-3 px-4 text-slate-400" id="m-btn-settings">
+            <i class="fas fa-cog text-xl"></i>
+            <span class="text-[10px] mt-1 font-medium">Pengaturan</span>
+        </button>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 min-h-screen">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h2 id="view-title" class="text-2xl font-bold text-slate-900">Dashboard Personal</h2>
+                <p class="text-slate-500 text-sm">Kelola keuangan mandiri dengan presisi.</p>
+            </div>
+            <div class="hidden md:block text-right">
+                <div id="live-clock" class="text-lg font-semibold text-primary">00:00:00</div>
+                <div class="text-xs text-slate-400" id="live-date">1 Januari 2024</div>
+            </div>
+        </header>
+
+        <!-- MODULE 1: PERSONAL -->
+        <section id="tab-personal" class="tab-content active">
+            <!-- SUMMARY CARDS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-accent">
+                    <p class="text-sm font-medium text-slate-500">Total Saldo</p>
+                    <h3 id="p-total-balance" class="text-2xl font-bold text-primary mt-1">Rp 0</h3>
                 </div>
-                <div class="flex items-center gap-6">
-                    <p class="font-black text-lg ${isExpense ? 'text-rose-400' : 'text-emerald-400'}">
-                        ${isExpense ? '-' : '+'} ${t.amount.toLocaleString('id-ID')}
-                    </p>
-                    <button onclick="deleteTransaction('${t.id}')" class="p-2 text-slate-700 hover:text-rose-500 transition-all">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
+                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-success">
+                    <p class="text-sm font-medium text-slate-500">Pemasukan</p>
+                    <h3 id="p-total-income" class="text-2xl font-bold text-success mt-1">Rp 0</h3>
+                </div>
+                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-danger">
+                    <p class="text-sm font-medium text-slate-500">Pengeluaran</p>
+                    <h3 id="p-total-expense" class="text-2xl font-bold text-danger mt-1">Rp 0</h3>
                 </div>
             </div>
-        `;
-    }).join('');
-    lucide.createIcons();
-}
 
-document.getElementById('transaction-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const amount = parseInt(document.getElementById('amount').value);
-    const catId = document.getElementById('category').value;
-    const catObj = categories[currentMode].find(c => c.id === catId);
-    
-    const newTransaction = {
-        id: Date.now().toString(),
-        amount,
-        catId,
-        type: catObj.type,
-        date: document.getElementById('date').value,
-        note: document.getElementById('note').value
-    };
-    
-    data[currentMode].push(newTransaction);
-    saveData();
-    updateUI();
-    e.target.reset();
-    document.getElementById('date').valueAsDate = new Date();
-});
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- FORM -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                        <h4 class="font-bold text-lg mb-4 text-primary"><i class="fas fa-plus-circle mr-2 text-accent"></i>Catat Transaksi</h4>
+                        <form id="form-personal" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">NOMINAL (Rp)</label>
+                                <input type="number" id="p-amount" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none" placeholder="Contoh: 50000">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">KATEGORI</label>
+                                <select id="p-category" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none">
+                                    <option value="Pemasukan">Pemasukan (Gaji/Bonus)</option>
+                                    <option value="Makanan & Minuman">Makanan & Minuman</option>
+                                    <option value="Transportasi">Transportasi</option>
+                                    <option value="Tagihan & Utilitas">Tagihan & Utilitas</option>
+                                    <option value="Hiburan & Gaya Hidup">Hiburan & Gaya Hidup</option>
+                                    <option value="Belanja">Belanja</option>
+                                    <option value="Investasi">Investasi</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">TANGGAL</label>
+                                <input type="date" id="p-date" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">CATATAN</label>
+                                <input type="text" id="p-note" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none" placeholder="Beli nasi padang...">
+                            </div>
+                            <button type="submit" class="w-full bg-primary hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">Simpan Transaksi</button>
+                        </form>
+                    </div>
+                </div>
 
-function deleteTransaction(id) {
-    if(confirm('Hapus record ini?')) {
-        data[currentMode] = data[currentMode].filter(t => t.id !== id);
-        saveData();
-        updateUI();
-    }
-}
+                <!-- ANALYTICS & LIST -->
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-md">
+                        <h4 class="font-bold text-lg mb-4 text-primary">Distribusi Pengeluaran</h4>
+                        <div class="relative h-64">
+                            <canvas id="personalChart"></canvas>
+                        </div>
+                    </div>
 
-function clearHistory() {
-    if(confirm('Hapus seluruh data di mode ini? Data yang dihapus tidak bisa dikembalikan.')) {
-        data[currentMode] = [];
-        saveData();
-        updateUI();
-    }
-}
+                    <div class="bg-white p-6 rounded-2xl shadow-md overflow-hidden">
+                        <h4 class="font-bold text-lg mb-4 text-primary">Riwayat Transaksi</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                                    <tr>
+                                        <th class="px-4 py-3">Info</th>
+                                        <th class="px-4 py-3">Kategori</th>
+                                        <th class="px-4 py-3">Nominal</th>
+                                        <th class="px-4 py-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="p-ledger" class="divide-y divide-slate-100">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-function saveData() {
-    localStorage.setItem(`moneygrizz_${currentMode}`, JSON.stringify(data[currentMode]));
-}
+        <!-- MODULE 2: UMKM -->
+        <section id="tab-umkm" class="tab-content">
+            <!-- UMKM SUMMARY -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="glass-card p-5 rounded-2xl shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Omset (Gross)</p>
+                    <h3 id="u-total-revenue" class="text-lg md:text-xl font-bold text-emerald-600 mt-1">Rp 0</h3>
+                </div>
+                <div class="glass-card p-5 rounded-2xl shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">HPP / Stok</p>
+                    <h3 id="u-total-hpp" class="text-lg md:text-xl font-bold text-slate-700 mt-1">Rp 0</h3>
+                </div>
+                <div class="glass-card p-5 rounded-2xl shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Operasional</p>
+                    <h3 id="u-total-ops" class="text-lg md:text-xl font-bold text-danger mt-1">Rp 0</h3>
+                </div>
+                <div class="glass-card p-5 rounded-2xl shadow-sm relative overflow-hidden">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Profit Bersih</p>
+                    <h3 id="u-total-profit" class="text-lg md:text-xl font-bold text-primary mt-1">Rp 0</h3>
+                    <div id="u-health-badge" class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold">---</div>
+                </div>
+            </div>
 
-function initChart() {
-    const ctx = document.getElementById('expenseChart').getContext('2d');
-    chartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0 }] },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: '600', size: 11 } } }
-            },
-            cutout: '75%'
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- FORM -->
+                <div class="lg:col-span-1">
+                    <div class="bg-primary p-6 rounded-2xl shadow-xl text-white">
+                        <h4 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-cash-register mr-2 text-accent"></i>Input Bisnis</h4>
+                        <form id="form-umkm" class="space-y-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1">NOMINAL TRANSAKSI</label>
+                                <input type="number" id="u-amount" required class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1">JENIS TRANSAKSI</label>
+                                <select id="u-type" class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white">
+                                    <option value="Penjualan">Penjualan / Pendapatan</option>
+                                    <option value="HPP">Pembelian Stok / Modal (HPP)</option>
+                                    <option value="Operasional">Biaya Operasional (Gaji/Sewa)</option>
+                                    <option value="Lain-lain">Lain-lain</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1">PELANGGAN / VENDOR</label>
+                                <input type="text" id="u-client" class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white" placeholder="Nama orang/toko...">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 mb-1">KETERANGAN</label>
+                                <input type="text" id="u-note" class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white" placeholder="Misal: Penjualan 10 Box...">
+                            </div>
+                            <button type="submit" class="w-full bg-accent hover:bg-accentHover text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">Simpan Data Bisnis</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TABLE -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h4 class="font-bold text-lg text-primary">Ledger Bisnis</h4>
+                            <div class="flex space-x-2">
+                                <button onclick="filterUmkm('Semua')" class="text-[10px] font-bold px-3 py-1 bg-slate-100 rounded-full hover:bg-slate-200">Semua</button>
+                                <button onclick="filterUmkm('Penjualan')" class="text-[10px] font-bold px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full">Sales</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                                    <tr>
+                                        <th class="px-4 py-3">Tanggal</th>
+                                        <th class="px-4 py-3">Kontak</th>
+                                        <th class="px-4 py-3">Jenis</th>
+                                        <th class="px-4 py-3">Total</th>
+                                        <th class="px-4 py-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="u-ledger" class="divide-y divide-slate-100">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 3: SETTINGS -->
+        <section id="tab-settings" class="tab-content">
+            <div class="max-w-2xl mx-auto space-y-6">
+                <div class="bg-white p-8 rounded-3xl shadow-md">
+                    <h4 class="text-xl font-bold mb-6 text-primary border-b pb-4">Data & Keamanan</h4>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                            <div>
+                                <p class="font-bold">Backup Data (Export)</p>
+                                <p class="text-xs text-slate-500">Unduh semua data ke dalam format JSON.</p>
+                            </div>
+                            <button onclick="exportData()" class="px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold">Export</button>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                            <div>
+                                <p class="font-bold">Pulihkan Data (Import)</p>
+                                <p class="text-xs text-slate-500">Upload file backup MoneyGrizz Anda.</p>
+                            </div>
+                            <label class="px-6 py-2 bg-accent text-white rounded-xl text-sm font-bold cursor-pointer">
+                                Import <input type="file" id="importFile" class="hidden" onchange="importData(event)">
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 bg-red-50 rounded-2xl">
+                            <div>
+                                <p class="font-bold text-danger">Reset Aplikasi</p>
+                                <p class="text-xs text-red-400">Hapus permanen semua catatan transaksi.</p>
+                            </div>
+                            <button onclick="clearAllData()" class="px-6 py-2 bg-danger text-white rounded-xl text-sm font-bold">Clear All</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-primary p-8 rounded-3xl text-white text-center">
+                    <i class="fas fa-shield-halved text-4xl text-accent mb-4"></i>
+                    <h4 class="text-lg font-bold">Data Lokal & Aman</h4>
+                    <p class="text-slate-400 text-sm mt-2">MoneyGrizz tidak menyimpan data Anda di server. Semua data tersimpan 100% di memori browser perangkat ini.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        /** STATE MANAGEMENT **/
+        let personalTransactions = JSON.parse(localStorage.getItem('moneygrizz_p')) || [];
+        let umkmTransactions = JSON.parse(localStorage.getItem('moneygrizz_u')) || [];
+        let chartInstance = null;
+
+        /** INITIALIZATION **/
+        window.onload = () => {
+            initDate();
+            switchTab('personal');
+            renderPersonal();
+            renderUmkm();
+            registerSW();
+        };
+
+        function initDate() {
+            const now = new Date();
+            document.getElementById('p-date').valueAsDate = now;
+            document.getElementById('live-date').innerText = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            setInterval(() => {
+                const time = new Date();
+                document.getElementById('live-clock').innerText = time.toLocaleTimeString('id-ID');
+            }, 1000);
         }
-    });
-}
 
-function updateChart() {
-    const list = data[currentMode].filter(t => t.type === 'expense');
-    const grouped = {};
-    list.forEach(t => {
-        const cat = categories[currentMode].find(c => c.id === t.catId);
-        grouped[cat.label] = (grouped[cat.label] || 0) + t.amount;
-    });
+        /** UTILS **/
+        const formatIDR = (num) => {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(num);
+        };
 
-    chartInstance.data.labels = Object.keys(grouped);
-    chartInstance.data.datasets[0].data = Object.values(grouped);
-    chartInstance.data.datasets[0].backgroundColor = Object.keys(grouped).map(l => 
-        [...categories.personal, ...categories.umkm].find(c => c.label === l).color
-    );
-    chartInstance.update();
-}
+        /** NAVIGATION **/
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            // Sidebar styling
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('sidebar-active'));
+            document.getElementById(`btn-${tabId}`).classList.add('sidebar-active');
 
-// PWA Prompt
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    document.getElementById('installApp').classList.remove('hidden');
-});
+            // Mobile nav styling
+            document.querySelectorAll('.md\\:hidden button').forEach(btn => btn.classList.remove('nav-item-active'));
+            document.getElementById(`m-btn-${tabId}`).classList.add('nav-item-active');
 
-document.getElementById('installApp').addEventListener('click', async () => {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt = null;
-    }
-});
+            // Title change
+            const titles = { 'personal': 'Dashboard Personal', 'umkm': 'Manajemen UMKM', 'settings': 'Pengaturan App' };
+            document.getElementById('view-title').innerText = titles[tabId];
 
-{
-  "name": "MoneyGrizz Financial master",
-  "short_name": "MoneyGrizz",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "description": "Powerful financial tracking for personal and business",
-  "icons": [
+            if(tabId === 'personal') renderPersonal();
+            if(tabId === 'umkm') renderUmkm();
+        }
+
+        /** PERSONAL LOGIC **/
+        document.getElementById('form-personal').onsubmit = (e) => {
+            e.preventDefault();
+            const trx = {
+                id: Date.now(),
+                amount: parseFloat(document.getElementById('p-amount').value),
+                category: document.getElementById('p-category').value,
+                date: document.getElementById('p-date').value,
+                note: document.getElementById('p-note').value || '-'
+            };
+            personalTransactions.unshift(trx);
+            saveAndRenderP();
+            e.target.reset();
+            initDate();
+        };
+
+        function deleteP(id) {
+            personalTransactions = personalTransactions.filter(t => t.id !== id);
+            saveAndRenderP();
+        }
+
+        function saveAndRenderP() {
+            localStorage.setItem('moneygrizz_p', JSON.stringify(personalTransactions));
+            renderPersonal();
+        }
+
+        function renderPersonal() {
+            const list = document.getElementById('p-ledger');
+            list.innerHTML = '';
+            
+            let income = 0, expense = 0;
+            const categoryTotals = {};
+
+            personalTransactions.forEach(t => {
+                if(t.category === 'Pemasukan') {
+                    income += t.amount;
+                } else {
+                    expense += t.amount;
+                    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+                }
+
+                const colorClass = t.category === 'Pemasukan' ? 'text-success' : 'text-slate-700';
+                const icon = t.category === 'Pemasukan' ? 'fa-arrow-up' : 'fa-shopping-cart';
+
+                list.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-4">
+                            <p class="text-xs font-bold text-primary">${new Date(t.date).toLocaleDateString('id-ID')}</p>
+                            <p class="text-[10px] text-slate-400 uppercase truncate max-w-[100px]">${t.note}</p>
+                        </td>
+                        <td class="px-4 py-4">
+                            <span class="text-[10px] bg-slate-100 px-2 py-1 rounded-lg font-medium">${t.category}</span>
+                        </td>
+                        <td class="px-4 py-4 font-bold ${colorClass}">${formatIDR(t.amount)}</td>
+                        <td class="px-4 py-4 text-right">
+                            <button onclick="deleteP(${t.id})" class="text-slate-300 hover:text-danger"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('p-total-income').innerText = formatIDR(income);
+            document.getElementById('p-total-expense').innerText = formatIDR(expense);
+            document.getElementById('p-total-balance').innerText = formatIDR(income - expense);
+
+            updatePersonalChart(categoryTotals);
+        }
+
+        function updatePersonalChart(data) {
+            const ctx = document.getElementById('personalChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+
+            if(labels.length === 0) return;
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ['#d97706', '#0f172a', '#10b981', '#b91c1c', '#6366f1', '#ec4899', '#94a3b8'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        /** UMKM LOGIC **/
+        document.getElementById('form-umkm').onsubmit = (e) => {
+            e.preventDefault();
+            const trx = {
+                id: Date.now(),
+                amount: parseFloat(document.getElementById('u-amount').value),
+                type: document.getElementById('u-type').value,
+                client: document.getElementById('u-client').value || 'Umum',
+                note: document.getElementById('u-note').value || '-',
+                date: new Date().toISOString().split('T')[0]
+            };
+            umkmTransactions.unshift(trx);
+            saveAndRenderU();
+            e.target.reset();
+        };
+
+        function saveAndRenderU() {
+            localStorage.setItem('moneygrizz_u', JSON.stringify(umkmTransactions));
+            renderUmkm();
+        }
+
+        function deleteU(id) {
+            umkmTransactions = umkmTransactions.filter(t => t.id !== id);
+            saveAndRenderU();
+        }
+
+        function renderUmkm(filter = 'Semua') {
+            const list = document.getElementById('u-ledger');
+            list.innerHTML = '';
+            
+            let revenue = 0, hpp = 0, ops = 0;
+
+            umkmTransactions.forEach(t => {
+                if(t.type === 'Penjualan') revenue += t.amount;
+                if(t.type === 'HPP') hpp += t.amount;
+                if(t.type === 'Operasional') ops += t.amount;
+
+                if(filter !== 'Semua' && t.type !== filter) return;
+
+                const typeColors = {
+                    'Penjualan': 'bg-emerald-100 text-emerald-700',
+                    'HPP': 'bg-slate-100 text-slate-700',
+                    'Operasional': 'bg-red-100 text-red-700'
+                };
+
+                list.innerHTML += `
+                    <tr class="text-xs">
+                        <td class="px-4 py-4 font-medium">${t.date}</td>
+                        <td class="px-4 py-4 font-bold text-primary">${t.client}</td>
+                        <td class="px-4 py-4"><span class="px-2 py-1 rounded-full ${typeColors[t.type] || 'bg-gray-100'}">${t.type}</span></td>
+                        <td class="px-4 py-4 font-bold">${formatIDR(t.amount)}</td>
+                        <td class="px-4 py-4 text-right">
+                            <button onclick="deleteU(${t.id})" class="text-slate-300 hover:text-danger"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const profit = revenue - (hpp + ops);
+            document.getElementById('u-total-revenue').innerText = formatIDR(revenue);
+            document.getElementById('u-total-hpp').innerText = formatIDR(hpp);
+            document.getElementById('u-total-ops').innerText = formatIDR(ops);
+            document.getElementById('u-total-profit').innerText = formatIDR(profit);
+
+            const badge = document.getElementById('u-health-badge');
+            if(profit > 0) {
+                badge.innerText = 'SEHAT';
+                badge.className = 'absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700';
+            } else if(profit < 0) {
+                badge.innerText = 'EVALUASI';
+                badge.className = 'absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700';
+            }
+        }
+
+        function filterUmkm(type) {
+            renderUmkm(type);
+        }
+
+        /** DATA SETTINGS **/
+        function exportData() {
+            const data = {
+                personal: personalTransactions,
+                umkm: umkmTransactions,
+                exportDate: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `moneygrizz_backup_${Date.now()}.json`;
+            a.click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if(confirm("Impor data akan menggabungkan data yang ada. Lanjutkan?")) {
+                        personalTransactions = [...imported.personal, ...personalTransactions];
+                        umkmTransactions = [...imported.umkm, ...umkmTransactions];
+                        saveAndRenderP();
+                        saveAndRenderU();
+                        alert("Data berhasil diimpor!");
+                    }
+                } catch (err) {
+                    alert("Gagal membaca file!");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            if(confirm("PERINGATAN: Semua data akan dihapus permanen!")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        /** PWA SERVICE WORKER **/
+        function registerSW() {
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'moneygrizz-v1';
+                    const ASSETS = ['./', './index.html'];
+                    self.addEventListener('install', e => {
+                        e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+                    });
+                    self.addEventListener('fetch', e => {
+                        e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const workerUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(workerUrl).catch(err => console.log('SW failed', err));
+            }
+        }
+    </script>
+
+    <!-- MANIFEST JSON (Inline Concept) -->
+    <script type="application/json" id="manifest">
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2488/2488744.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+        "name": "MoneyGrizz Finance",
+        "short_name": "MoneyGrizz",
+        "start_url": ".",
+        "display": "standalone",
+        "background_color": "#0f172a",
+        "theme_color": "#0f172a",
+        "icons": [
+            {
+                "src": "https://cdn-icons-png.flaticon.com/512/2454/2454282.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
     }
-  ]
-}
+    </script>
+</body>
+</html>
