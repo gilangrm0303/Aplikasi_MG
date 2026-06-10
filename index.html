@@ -1,644 +1,1265 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full bg-[#f8fafc]">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoneyGrizz | Premium Finance Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MoneyGrizz - Elegant Personal & UMKM Financial Tracker</title>
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2454/2454282.png">
+    <meta name="apple-mobile-web-app-title" content="MoneyGrizz">
     
-    <!-- Tailwind CSS -->
+    <!-- CDNs (Tailwind, FontAwesome, ChartJS) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    
+    <!-- Web App Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Custom Style Config & Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#0f172a',
-                        secondary: '#1e293b',
-                        accent: '#d97706',
-                        accentHover: '#b45309',
-                        success: '#10b981',
-                        danger: '#b91c1c',
-                        canvas: '#f8fafc'
-                    },
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                        colors: {
+                            navy: {
+                                800: '#1e293b',
+                                900: '#0f172a',
+                                950: '#020617',
+                            },
+                            grizzly: {
+                                500: '#d97706',
+                                600: '#b45309',
+                                DEFAULT: '#d97706',
+                            }
+                        }
                 }
             }
         }
     </script>
-
+    
     <style>
-        body { background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
-        .sidebar-active { border-right: 4px solid #d97706; background-color: #1e293b; color: white; }
-        .nav-item-active { color: #d97706; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
     </style>
 </head>
-<body class="font-sans text-slate-800">
+<body class="h-full overflow-hidden text-slate-900 bg-[#f8fafc] font-sans flex flex-col md:flex-row">
 
-    <!-- DESKTOP SIDEBAR -->
-    <aside class="fixed left-0 top-0 h-screen w-64 bg-primary text-slate-300 hidden md:flex flex-col z-50">
-        <div class="p-6 flex items-center space-x-3">
-            <div class="w-10 h-10 bg-accent rounded-xl flex items-center justify-center text-white text-xl">
-                <i class="fas fa-bear-waving-front"></i>
+    <!-- DESKTOP FIXED SIDEBAR -->
+    <aside class="hidden md:flex flex-col w-72 bg-[#0f172a] border-r border-slate-800 text-white h-screen select-none shrink-0">
+        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-[#d97706] flex items-center justify-center shadow-lg shadow-[#d97706]/30">
+                    <i class="fa-solid fa-bear-track text-xl text-white">ðŸ»</i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-display font-bold tracking-tight text-white flex items-center">
+                        Money<span class="text-[#d97706]">Grizz</span>
+                    </h1>
+                    <span class="text-xs text-slate-400 font-medium">Asisten Keuangan Offline</span>
+                </div>
             </div>
-            <h1 class="text-xl font-bold tracking-tight text-white">Money<span class="text-accent">Grizz</span></h1>
         </div>
-        
-        <nav class="mt-6 flex-1">
-            <button onclick="switchTab('personal')" class="nav-btn w-full flex items-center px-6 py-4 hover:bg-secondary transition-all" id="btn-personal">
-                <i class="fas fa-user-shield w-8"></i> Personal
-            </button>
-            <button onclick="switchTab('umkm')" class="nav-btn w-full flex items-center px-6 py-4 hover:bg-secondary transition-all" id="btn-umkm">
-                <i class="fas fa-store w-8"></i> UMKM Bisnis
-            </button>
-            <button onclick="switchTab('settings')" class="nav-btn w-full flex items-center px-6 py-4 hover:bg-secondary transition-all" id="btn-settings">
-                <i class="fas fa-cog w-8"></i> Pengaturan
-            </button>
-        </nav>
 
-        <div class="p-6 text-xs text-slate-500 border-t border-slate-700">
-            &copy; 2024 MoneyGrizz v1.0 <br> Offline-Ready PWA
+        <!-- Mode Swapping & Core Nav Links -->
+        <div class="flex-1 px-4 py-6 space-y-6 overflow-y-auto no-scrollbar">
+            <div>
+                <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Model Akuntansi</p>
+                <div class="space-y-1">
+                    <button onclick="switchMode('pribadi')" id="btn-side-pribadi" class="w-full flex items-center px-3 py-3 rounded-xl transition-all duration-300 font-medium text-left bg-grizzly text-white">
+                        <i class="fa-solid fa-user-shield w-6 text-center mr-3 text-lg"></i>
+                        <span>Pencatatan Pribadi</span>
+                    </button>
+                    <button onclick="switchMode('umkm')" id="btn-side-umkm" class="w-full flex items-center px-3 py-3 rounded-xl transition-all duration-300 font-medium text-left text-slate-400 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-store w-6 text-center mr-3 text-lg"></i>
+                        <span>Keuangan UMKM</span>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Sistem & Cadangan</p>
+                <div class="space-y-1">
+                    <button onclick="switchMode('pengaturan')" id="btn-side-pengaturan" class="w-full flex items-center px-3 py-3 rounded-xl transition-all duration-300 font-medium text-left text-slate-400 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-sliders w-6 text-center mr-3 text-lg"></i>
+                        <span>Konfigurasi & Backup</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop Footer Section -->
+        <div class="p-5 border-t border-slate-800 bg-slate-950/40 text-center">
+            <div class="text-xs text-slate-400 font-medium">MoneyGrizz v1.0.0</div>
+            <div class="text-[10px] text-emerald-400 font-mono mt-1 flex items-center justify-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Mode Offline Aktif</span>
+            </div>
         </div>
     </aside>
 
-    <!-- MOBILE BOTTOM NAV -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center md:hidden z-50 pb-safe shadow-2xl">
-        <button onclick="switchTab('personal')" class="flex flex-col items-center py-3 px-4 text-slate-400" id="m-btn-personal">
-            <i class="fas fa-user-shield text-xl"></i>
-            <span class="text-[10px] mt-1 font-medium">Personal</span>
+    <!-- MOBILE STICKY TOP HEADER -->
+    <header class="md:hidden bg-[#0f172a] text-white px-5 pt-6 pb-4 rounded-b-3xl shadow-lg flex items-center justify-between shrink-0 z-40">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-[#d97706] rounded-lg flex items-center justify-center shadow-inner">
+                <span class="text-white text-base">ðŸ»</span>
+            </div>
+            <div>
+                <h1 class="text-lg font-display font-bold text-[#f8fafc] tracking-tight leading-none">
+                    Money<span class="text-[#d97706]">Grizz</span>
+                </h1>
+                <span class="text-[9px] text-slate-400">Offline Personal & Business Partner</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <div class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded text-[10px] font-mono flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>OFFLINE</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP WRAPPER -->
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        
+        <!-- CONTENT SCROLL AREA -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar pb-24 md:pb-8">
+
+            <!-- ================= MODULE 1: PENCATATAN PRIBADI ================= -->
+            <section id="sec-pribadi" class="space-y-6 active-section transition-opacity duration-300">
+                <!-- Header -->
+                <div class="flex flex-col justify-between sm:flex-row sm:items-center gap-2">
+                    <div>
+                        <span class="text-xs font-bold text-grizzly tracking-wider uppercase font-display">Pencatatan Keuangan Pribadi</span>
+                        <h2 class="text-2xl md:text-3xl font-display font-bold text-slate-900 mt-0.5">Ringkasan Finansial Anda</h2>
+                    </div>
+                </div>
+
+                <!-- Live Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Cards 1: Saldo -->
+                    <div class="bg-gradient-to-br from-navy-900 to-slate-800 rounded-2xl p-6 text-white shadow-md relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Total Saldo Terbuka</span>
+                            <span class="px-2.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-full text-[10px] font-medium tracking-wide">Net</span>
+                        </div>
+                        <div class="mt-4">
+                            <span id="p-total-saldo" class="text-2xl md:text-3xl font-display font-bold tracking-tight text-white">Rp 0</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 font-medium flex items-center">
+                            <i class="fa-solid fa-wallet mr-1.5 text-grizzly"></i> Akumulasi dana saat ini
+                        </p>
+                    </div>
+
+                    <!-- Cards 2: Total Pemasukan -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-emerald-50 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Pemasukan</span>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                <i class="fa-solid fa-arrow-down-left"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <span id="p-total-pemasukan" class="text-2xl md:text-3xl font-display font-bold tracking-tight text-emerald-600">Rp 0</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 font-medium flex items-center">
+                            <i class="fa-solid fa-circle-chevron-up mr-1.5 text-emerald-500"></i> Aliran kas masuk
+                        </p>
+                    </div>
+
+                    <!-- Cards 3: Total Pengeluaran -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-red-50 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Pengeluaran</span>
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
+                                <i class="fa-solid fa-arrow-up-right"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <span id="p-total-pengeluaran" class="text-2xl md:text-3xl font-display font-bold tracking-tight text-red-600">Rp 0</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 font-medium flex items-center">
+                            <i class="fa-solid fa-circle-chevron-down mr-1.5 text-red-500"></i> Aliran kas keluar
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Input Elements & Interactive Visualizations -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Form Input Card -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm col-span-1">
+                        <h3 class="text-lg font-display font-bold text-slate-900 mb-5 flex items-center">
+                            <i class="fa-solid fa-file-invoice-dollar text-grizzly mr-2"></i> Tambah Transaksi
+                        </h3>
+                        
+                        <form id="form-personal" onsubmit="savePersonalEntry(event)" class="space-y-4">
+                            <!-- Type Selection -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tipe Transaksi</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" id="btn-p-pemasukan" onclick="setPersonalType('in')" class="py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center transition-all duration-200 border-slate-200 bg-slate-50 text-slate-400">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>Pemasukan
+                                    </button>
+                                    <button type="button" id="btn-p-pengeluaran" onclick="setPersonalType('out')" class="py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center transition-all duration-200 border-grizzly text-grizzly bg-amber-500/10 shadow-sm shadow-amber-500/10">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-red-600 mr-2"></span>Pengeluaran
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Amount -->
+                            <div>
+                                <label for="p-amount" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nominal (Rupiah)</label>
+                                <div class="relative rounded-xl shadow-sm">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                                        <span class="text-slate-400 text-sm font-medium">Rp</span>
+                                    </div>
+                                    <input type="number" name="amount" id="p-amount" required placeholder="0" class="block w-full rounded-xl border border-slate-200 pl-10 pr-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm">
+                                </div>
+                            </div>
+
+                            <!-- Category -->
+                            <div>
+                                <label for="p-category" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Kategori</label>
+                                <select name="category" id="p-category" required class="block w-full rounded-xl border border-slate-200 px-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm bg-white">
+                                    <!-- Dynamic Options based on transactional type -->
+                                </select>
+                            </div>
+
+                            <!-- Date Picker -->
+                            <div>
+                                <label for="p-date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Tanggal</label>
+                                <input type="date" name="date" id="p-date" required class="block w-full rounded-xl border border-slate-200 px-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm bg-white">
+                            </div>
+
+                            <!-- Memo / Note -->
+                            <div>
+                                <label for="p-note" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Catatan / Keterangan</label>
+                                <input type="text" name="note" id="p-note" placeholder="Contoh: Makan Siang di Warteg" class="block w-full rounded-xl border border-slate-200 px-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm bg-white">
+                            </div>
+
+                            <!-- Submit Action -->
+                            <button type="submit" class="w-full py-3 bg-grizzly hover:bg-grizzly-600 active:scale-95 text-white font-semibold text-sm rounded-xl transition-all duration-200 shadow-md shadow-grizzly/10 flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Simpan Transaksi</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Category spending Analytics Chart -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm col-span-1 lg:col-span-2 flex flex-col h-full justify-between">
+                        <div>
+                            <h3 class="text-lg font-display font-bold text-slate-900 mb-1 flex items-center">
+                                <i class="fa-solid fa-chart-pie text-grizzly mr-2"></i> Analisis Pengeluaran
+                            </h3>
+                            <p class="text-xs text-slate-400 font-medium mb-3">Persentase distribusi pengeluaran berdasarkan kategori utama</p>
+                        </div>
+                        <div class="flex-1 flex items-center justify-center min-h-[220px] py-4">
+                            <div class="w-full max-w-[280px] h-[220px] relative">
+                                <canvas id="chart-personal-expenses"></canvas>
+                                <div id="chart-personal-empty-msg" class="absolute inset-0 bg-white flex flex-col justify-center items-center text-center p-4">
+                                    <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-2">
+                                        <i class="fa-solid fa-chart-line text-2xl"></i>
+                                    </div>
+                                    <p class="text-xs text-slate-400 font-medium">Belum ada statistik pengeluaran</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-100 pt-3 text-center">
+                            <span class="text-[10px] text-slate-400 font-medium font-mono">Dihitung otomatis 100% tanpa jaringan internet</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal Book-Ledger -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="text-lg font-display font-bold text-slate-900 flex items-center">
+                            <i class="fa-solid fa-list-ul text-grizzly mr-2"></i> Riwayat Kas Pribadi
+                        </h3>
+                        <span id="p-ledger-count" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">0 Entri</span>
+                    </div>
+
+                    <!-- Transaction List Container -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-100 text-left">
+                            <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4">Kategori</th>
+                                    <th scope="col" class="px-6 py-4">Catatan / Memo</th>
+                                    <th scope="col" class="px-6 py-4">Tanggal</th>
+                                    <th scope="col" class="px-6 py-4 text-right">Nominal</th>
+                                    <th scope="col" class="px-6 py-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="personal-ledger-body" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic transactions inserted here -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- Empty State Inside Table -->
+                        <div id="p-empty-state" class="py-16 text-center">
+                            <div class="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-slate-300 mb-3 border border-dashed border-slate-200">
+                                <i class="fa-solid fa-receipt text-3xl"></i>
+                            </div>
+                            <h4 class="text-sm font-semibold text-slate-800">Daftar Transaksi Kosong</h4>
+                            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Mulai tambahkan pengeluaran atau pemasukan baru Anda di formulir input sebelah kiri.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ================= MODULE 2: PENCATATAN UMKM ================= -->
+            <section id="sec-umkm" class="space-y-6 hidden transition-opacity duration-300">
+                <!-- Header -->
+                <div class="flex flex-col justify-between sm:flex-row sm:items-center gap-2">
+                    <div>
+                        <span class="text-xs font-bold text-grizzly tracking-wider uppercase font-display">Pencatatan Keuangan UMKM</span>
+                        <h2 class="text-2xl md:text-3xl font-display font-bold text-slate-900 mt-0.5">Analisis Bisnis & Kas UMKM</h2>
+                    </div>
+                </div>
+
+                <!-- Business Health Metrics -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Cards 1: Omset (Penjualan) -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-emerald-50 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Omset Penjualan</span>
+                            <div class="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
+                                <i class="fa-solid fa-scale-balanced text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <span id="u-total-omset" class="text-xl md:text-2xl font-display font-bold tracking-tight text-emerald-600">Rp 0</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2 font-medium flex items-center">
+                            <i class="fa-solid fa-chart-line mr-1 text-emerald-500"></i> Pendapatan kotor bisnis
+                        </p>
+                    </div>
+
+                    <!-- Cards 2: HPP & Modal Stok -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-red-50 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Belanja Stok & HPP</span>
+                            <div class="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500">
+                                <i class="fa-solid fa-boxes-packing text-sm"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <span id="u-total-hpp" class="text-xl md:text-2xl font-display font-bold tracking-tight text-amber-700">Rp 0</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2 font-medium flex items-center">
+                            <i class="fa-solid fa-box mr-1 text-amber-500"></i> Modal pengadaan barang
+                        </p>
+                    </div>
+
+                    <!-- Cards 3: Biaya Operasional -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-red-50 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Biaya Operasional</span>
+                            <div class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-500">
+                                <i class="fa-solid fa-gears text-sm text-red-500"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <span id="u-total-operasional" class="text-xl md:text-2xl font-display font-bold tracking-tight text-red-600">Rp 0</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2 font-medium flex items-center">
+                            <i class="fa-solid fa-wrench mr-1 text-red-500"></i> Beban bulanan & sewa
+                        </p>
+                    </div>
+
+                    <!-- Cards 4: Keuntungan Bersih + Health Status Badge -->
+                    <div class="bg-gradient-to-br from-navy-900 to-slate-800 rounded-2xl p-5 text-white shadow-md relative overflow-hidden group">
+                        <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-white/5 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Keuntungan Bersih</span>
+                            <span id="u-health-badge" class="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded text-[9.5px] font-bold uppercase tracking-wider">Sehat</span>
+                        </div>
+                        <div class="mt-3">
+                            <span id="u-total-net" class="text-xl md:text-2xl font-display font-bold tracking-tight">Rp 0</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-2 font-medium flex items-center">
+                            <i class="fa-solid fa-sack-dollar mr-1 text-emerald-500"></i> Laba bersih usaha (Nett)
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Input Elements & Business Database Settings -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Business input Form panel -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm col-span-1">
+                        <h3 class="text-lg font-display font-bold text-slate-900 mb-5 flex items-center">
+                            <i class="fa-solid fa-shop text-grizzly mr-2"></i> Entri Transaksi UMKM
+                        </h3>
+
+                        <form id="form-umkm" onsubmit="saveUmkmEntry(event)" class="space-y-4">
+                            <!-- Type Selection -->
+                            <div>
+                                <label for="u-type" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Jenis Transaksi Bisnis</label>
+                                <select name="type" id="u-type" required class="block w-full rounded-xl border border-slate-200 px-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm bg-white">
+                                    <option value="omset">Penjualan / Pendapatan (Omset)</option>
+                                    <option value="hpp">Pembelian Stok / HPP (Modal Barang)</option>
+                                    <option value="operasional">Biaya Operasional (Sewa/Gaji/Beban)</option>
+                                    <option value="lain-lain">Biaya Lain-lain</option>
+                                </select>
+                            </div>
+
+                            <!-- Amount -->
+                            <div>
+                                <label for="u-amount" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nominal (Rupiah)</label>
+                                <div class="relative rounded-xl shadow-sm">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                                        <span class="text-slate-400 text-sm font-medium">Rp</span>
+                                    </div>
+                                    <input type="number" name="amount" id="u-amount" required placeholder="0" class="block w-full rounded-xl border border-slate-200 pl-10 pr-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm">
+                                </div>
+                            </div>
+
+                            <!-- Date Picker -->
+                            <div>
+                                <label for="u-date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Tanggal</label>
+                                <input type="date" name="date" id="u-date" required class="block w-full rounded-xl border border-slate-200 px-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm bg-white">
+                            </div>
+
+                            <!-- Customer / Vendor Connection -->
+                            <div>
+                                <label for="u-relation" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nama Pelanggan / Vendor <span class="text-slate-400 font-normal">(Opsional)</span></label>
+                                <div class="relative rounded-xl shadow-sm">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <i class="fa-solid fa-handshake text-slate-400 text-sm"></i>
+                                    </div>
+                                    <input type="text" name="relation" id="u-relation" placeholder="Contoh: Toko Berkah / Bpk Ahmad" class="block w-full rounded-xl border border-slate-200 pl-9 pr-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm bg-white">
+                                </div>
+                            </div>
+
+                            <!-- Memo description -->
+                            <div>
+                                <label for="u-note" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Keterangan Transaksi</label>
+                                <input type="text" name="note" id="u-note" required placeholder="Contoh: Penjualan 12 Box Martabak Keju" class="block w-full rounded-xl border border-slate-200 px-3 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-grizzly focus:border-grizzly font-medium sm:text-sm bg-white">
+                            </div>
+
+                            <!-- Action button -->
+                            <button type="submit" class="w-full py-3 bg-grizzly hover:bg-grizzly-600 active:scale-95 text-white font-semibold text-sm rounded-xl transition-all duration-200 shadow-md shadow-grizzly/10 flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-shop"></i>
+                                <span>Simpan Entri UMKM</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Business filter-ledgers & List items -->
+                    <div class="col-span-1 lg:col-span-2 space-y-4">
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
+                            <!-- Filters & Header bar selection -->
+                            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <h3 class="text-lg font-display font-bold text-slate-900 flex items-center">
+                                    <i class="fa-solid fa-list-check text-grizzly mr-2"></i> Register Jurnal UMKM
+                                </h3>
+                                
+                                <div class="flex flex-wrap gap-1.5 bg-slate-50 p-1 rounded-xl shrink-0">
+                                    <button onclick="setUmkmFilter('all')" id="btn-u-filter-all" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-grizzly text-white shadow-sm">Semua</button>
+                                    <button onclick="setUmkmFilter('omset')" id="btn-u-filter-omset" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 text-slate-500 hover:text-slate-800">Penjualan</button>
+                                    <button onclick="setUmkmFilter('hpp')" id="btn-u-filter-hpp" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 text-slate-500 hover:text-slate-800">Belanja Stok</button>
+                                    <button onclick="setUmkmFilter('operasional')" id="btn-u-filter-operasional" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 text-slate-500 hover:text-slate-800">Operasional</button>
+                                </div>
+                            </div>
+
+                            <!-- List -->
+                            <div class="overflow-x-auto flex-1">
+                                <table class="min-w-full divide-y divide-slate-100 text-left">
+                                    <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-4">Tipe Jurnal</th>
+                                            <th scope="col" class="px-6 py-4">Keterangan</th>
+                                            <th scope="col" class="px-6 py-4">Klien/Vendor</th>
+                                            <th scope="col" class="px-6 py-4">Tanggal</th>
+                                            <th scope="col" class="px-6 py-4 text-right">Nominal</th>
+                                            <th scope="col" class="px-6 py-4 text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="umkm-ledger-body" class="divide-y divide-slate-100 text-sm">
+                                        <!-- Dynamic rows inserted dynamically in JS -->
+                                    </tbody>
+                                </table>
+
+                                <!-- Empty records warning state -->
+                                <div id="u-empty-state" class="py-20 text-center">
+                                    <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-slate-300 mb-3 border border-dashed border-slate-200">
+                                        <i class="fa-solid fa-store-slash text-2xl"></i>
+                                    </div>
+                                    <h4 class="text-sm font-semibold text-slate-800">Belum Ada Transaksi Usaha</h4>
+                                    <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Pilih jenis transaksi, masukkan nilai nominal rincian bisnis, lalu simpan.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ================= UTILITY SECTION: CONFIGURATION & CONFIG BACKUP ================= -->
+            <section id="sec-pengaturan" class="space-y-6 hidden transition-opacity duration-300">
+                <!-- Header -->
+                <div>
+                    <span class="text-xs font-bold text-grizzly tracking-wider uppercase font-display">Sistem & Utilitas Database</span>
+                    <h2 class="text-2xl md:text-3xl font-display font-bold text-slate-900 mt-0.5">Konfigurasi MoneyGrizz</h2>
+                </div>
+
+                <!-- Database Tools Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Backup Tools -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                                <i class="fa-solid fa-cloud-arrow-down text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-md font-display font-bold text-slate-900">Ekspor Data Lokal</h3>
+                                <p class="text-xs text-slate-400 font-medium">Cadangkan keuangan Anda</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed">Unduh semua entri dan riwayat akuntansi "Pencatatan Pribadi" dan "Pencatatan UMKM" secara offline ke dalam file dokumen format JSON aman.</p>
+                        <button onclick="exportFullDatabase()" class="w-full py-3 bg-navy-900 hover:bg-navy-800 active:scale-95 text-white text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Unduh File Cadangan (.json)</span>
+                        </button>
+                    </div>
+
+                    <!-- Restoration Tools -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                                <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-md font-display font-bold text-slate-900">Impor File Cadangan</h3>
+                                <p class="text-xs text-slate-400 font-medium">Pulihkan catatan transaksi</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed">Unggah file dokumen cadangan (.json) dari perangkat Anda untuk memulihkan seluruh kas yang sebelumnya sudah Anda amankan.</p>
+                        
+                        <label class="w-full py-3 bg-slate-150 hover:bg-slate-200 border border-slate-350 cursor-pointer active:scale-95 text-slate-800 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 mr-3">
+                            <i class="fa-solid fa-file-import"></i>
+                            <span>Pilih File Backup JSON</span>
+                            <input type="file" id="db-import-file-input" accept=".json" onchange="importFullDatabase(event)" class="none hidden">
+                        </label>
+                    </div>
+
+                    <!-- Reset Tools -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-red-500/10 text-red-600 flex items-center justify-center">
+                                <i class="fa-solid fa-trash-can text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-md font-display font-bold text-slate-900">Setel Ulang Aplikasi</h3>
+                                <p class="text-xs text-slate-305 font-medium text-red-600">Bahaya! Data akan terhapus</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed">Menyetel ulang sistem akan menghapus mutlak semua riwayat pengeluaran dan pemasukan pada perangkat ini dan tidak bisa dikembalikan.</p>
+                        <button onclick="clearFullDatabase()" class="w-full py-3 bg-red-700 hover:bg-red-800 active:scale-95 text-white text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-md shadow-red-700/10">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>Hapus Mutlak Seluruh Data</span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Technical Specification -->
+                <div class="bg-navy-900 rounded-2xl p-6 text-white border border-slate-800 relative overflow-hidden group">
+                    <div class="absolute right-0 bottom-0 text-white/5 pointer-events-none translate-x-12 translate-y-12">
+                        <i class="fa-solid fa-bear-track text-[220px]">ðŸ»</i>
+                    </div>
+                    <h3 class="text-lg font-display font-bold text-white mb-2 flex items-center">
+                        <i class="fa-solid fa-server mr-2 text-grizzly"></i> Arsitektur & Keamanan Offline
+                    </h3>
+                    <p class="text-xs text-slate-303 leading-relaxed max-w-2xl font-medium">
+                        Aplikasi MoneyGrizz beroperasi dengan mengandalkan teknologi sandbox pada peramban web dan WebView internal Android. Seluruh kalkulasi finansial serta pembukuan personal ataupun buku besar UMKM disimpan sepenuhnya ke dalam memori fisik aman terenkripsi lokal Anda (LocalStorage), sehingga keamanan data 100% terjaga tanpa pernah dikirimkan ke pihak eksternal, server online, ataupun penyedia awan.
+                    </p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                        <div class="bg-white/5 rounded-xl p-3 text-center border border-white/5">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase">Engine Penyimpanan</div>
+                            <div class="text-sm font-bold text-amber-500 font-mono mt-1">LocalStorage</div>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-3 text-center border border-white/5">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase">Sistem Enkoder</div>
+                            <div class="text-sm font-bold text-amber-500 font-mono mt-1">UTF-8/JSON</div>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-3 text-center border border-white/5">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase">Mode Konektivitas</div>
+                            <div class="text-sm font-bold text-emerald-400 font-mono mt-1">100% Offline</div>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-3 text-center border border-white/5">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase">Jenis Pembangunan</div>
+                            <div class="text-sm font-bold text-emerald-400 font-mono mt-1">Standalone WebApp</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- MOBILE STICKY BOTTOM NAVIGATION BAR -->
+    <nav class="md:hidden fixed bottom-5 left-4 right-4 bg-white/95 backdrop-blur-md border border-slate-100 text-slate-700 flex items-center justify-around py-2.5 px-3 z-50 shadow-[0_8px_30px_rgb(15,23,42,0.08)] rounded-2xl">
+        <button onclick="switchMode('pribadi')" id="btn-mob-pribadi" class="flex flex-col items-center justify-center space-y-1 text-grizzly font-bold flex-1 transition-all duration-300">
+            <i class="fa-solid fa-user-shield text-base"></i>
+            <span class="text-[9px] font-semibold tracking-tight">Kas Pribadi</span>
         </button>
-        <button onclick="switchTab('umkm')" class="flex flex-col items-center py-3 px-4 text-slate-400" id="m-btn-umkm">
-            <i class="fas fa-store text-xl"></i>
-            <span class="text-[10px] mt-1 font-medium">UMKM</span>
+        <button onclick="switchMode('umkm')" id="btn-mob-umkm" class="flex flex-col items-center justify-center space-y-1 text-slate-400 opacity-50 hover:opacity-100 flex-1 transition-all duration-300">
+            <i class="fa-solid fa-store text-base"></i>
+            <span class="text-[9px] font-semibold tracking-tight">Keuangan UMKM</span>
         </button>
-        <button onclick="switchTab('settings')" class="flex flex-col items-center py-3 px-4 text-slate-400" id="m-btn-settings">
-            <i class="fas fa-cog text-xl"></i>
-            <span class="text-[10px] mt-1 font-medium">Pengaturan</span>
+        <button onclick="switchMode('pengaturan')" id="btn-mob-pengaturan" class="flex flex-col items-center justify-center space-y-1 text-slate-400 opacity-50 hover:opacity-100 flex-1 transition-all duration-300">
+            <i class="fa-solid fa-sliders text-base"></i>
+            <span class="text-[9px] font-semibold tracking-tight">Sistem</span>
         </button>
     </nav>
 
-    <!-- MAIN CONTENT -->
-    <main class="md:ml-64 p-4 md:p-8 pb-24 md:pb-8 min-h-screen">
-        
-        <!-- HEADER -->
-        <header class="flex justify-between items-center mb-8">
-            <div>
-                <h2 id="view-title" class="text-2xl font-bold text-slate-900">Dashboard Personal</h2>
-                <p class="text-slate-500 text-sm">Kelola keuangan mandiri dengan presisi.</p>
-            </div>
-            <div class="hidden md:block text-right">
-                <div id="live-clock" class="text-lg font-semibold text-primary">00:00:00</div>
-                <div class="text-xs text-slate-400" id="live-date">1 Januari 2024</div>
-            </div>
-        </header>
 
-        <!-- MODULE 1: PERSONAL -->
-        <section id="tab-personal" class="tab-content active">
-            <!-- SUMMARY CARDS -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-accent">
-                    <p class="text-sm font-medium text-slate-500">Total Saldo</p>
-                    <h3 id="p-total-balance" class="text-2xl font-bold text-primary mt-1">Rp 0</h3>
-                </div>
-                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-success">
-                    <p class="text-sm font-medium text-slate-500">Pemasukan</p>
-                    <h3 id="p-total-income" class="text-2xl font-bold text-success mt-1">Rp 0</h3>
-                </div>
-                <div class="glass-card p-6 rounded-2xl shadow-sm border-l-4 border-danger">
-                    <p class="text-sm font-medium text-slate-500">Pengeluaran</p>
-                    <h3 id="p-total-expense" class="text-2xl font-bold text-danger mt-1">Rp 0</h3>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- FORM -->
-                <div class="lg:col-span-1">
-                    <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
-                        <h4 class="font-bold text-lg mb-4 text-primary"><i class="fas fa-plus-circle mr-2 text-accent"></i>Catat Transaksi</h4>
-                        <form id="form-personal" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">NOMINAL (Rp)</label>
-                                <input type="number" id="p-amount" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none" placeholder="Contoh: 50000">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">KATEGORI</label>
-                                <select id="p-category" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none">
-                                    <option value="Pemasukan">Pemasukan (Gaji/Bonus)</option>
-                                    <option value="Makanan & Minuman">Makanan & Minuman</option>
-                                    <option value="Transportasi">Transportasi</option>
-                                    <option value="Tagihan & Utilitas">Tagihan & Utilitas</option>
-                                    <option value="Hiburan & Gaya Hidup">Hiburan & Gaya Hidup</option>
-                                    <option value="Belanja">Belanja</option>
-                                    <option value="Investasi">Investasi</option>
-                                    <option value="Lainnya">Lainnya</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">TANGGAL</label>
-                                <input type="date" id="p-date" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1">CATATAN</label>
-                                <input type="text" id="p-note" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent outline-none" placeholder="Beli nasi padang...">
-                            </div>
-                            <button type="submit" class="w-full bg-primary hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">Simpan Transaksi</button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- ANALYTICS & LIST -->
-                <div class="lg:col-span-2 space-y-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-md">
-                        <h4 class="font-bold text-lg mb-4 text-primary">Distribusi Pengeluaran</h4>
-                        <div class="relative h-64">
-                            <canvas id="personalChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-md overflow-hidden">
-                        <h4 class="font-bold text-lg mb-4 text-primary">Riwayat Transaksi</h4>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
-                                    <tr>
-                                        <th class="px-4 py-3">Info</th>
-                                        <th class="px-4 py-3">Kategori</th>
-                                        <th class="px-4 py-3">Nominal</th>
-                                        <th class="px-4 py-3 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="p-ledger" class="divide-y divide-slate-100">
-                                    <!-- Dynamic -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- MODULE 2: UMKM -->
-        <section id="tab-umkm" class="tab-content">
-            <!-- UMKM SUMMARY -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="glass-card p-5 rounded-2xl shadow-sm">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Omset (Gross)</p>
-                    <h3 id="u-total-revenue" class="text-lg md:text-xl font-bold text-emerald-600 mt-1">Rp 0</h3>
-                </div>
-                <div class="glass-card p-5 rounded-2xl shadow-sm">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">HPP / Stok</p>
-                    <h3 id="u-total-hpp" class="text-lg md:text-xl font-bold text-slate-700 mt-1">Rp 0</h3>
-                </div>
-                <div class="glass-card p-5 rounded-2xl shadow-sm">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Operasional</p>
-                    <h3 id="u-total-ops" class="text-lg md:text-xl font-bold text-danger mt-1">Rp 0</h3>
-                </div>
-                <div class="glass-card p-5 rounded-2xl shadow-sm relative overflow-hidden">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Profit Bersih</p>
-                    <h3 id="u-total-profit" class="text-lg md:text-xl font-bold text-primary mt-1">Rp 0</h3>
-                    <div id="u-health-badge" class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold">---</div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- FORM -->
-                <div class="lg:col-span-1">
-                    <div class="bg-primary p-6 rounded-2xl shadow-xl text-white">
-                        <h4 class="font-bold text-lg mb-4 flex items-center"><i class="fas fa-cash-register mr-2 text-accent"></i>Input Bisnis</h4>
-                        <form id="form-umkm" class="space-y-4">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1">NOMINAL TRANSAKSI</label>
-                                <input type="number" id="u-amount" required class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1">JENIS TRANSAKSI</label>
-                                <select id="u-type" class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white">
-                                    <option value="Penjualan">Penjualan / Pendapatan</option>
-                                    <option value="HPP">Pembelian Stok / Modal (HPP)</option>
-                                    <option value="Operasional">Biaya Operasional (Gaji/Sewa)</option>
-                                    <option value="Lain-lain">Lain-lain</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1">PELANGGAN / VENDOR</label>
-                                <input type="text" id="u-client" class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white" placeholder="Nama orang/toko...">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-400 mb-1">KETERANGAN</label>
-                                <input type="text" id="u-note" class="w-full px-4 py-3 bg-secondary border border-slate-700 rounded-xl focus:ring-2 focus:ring-accent outline-none text-white" placeholder="Misal: Penjualan 10 Box...">
-                            </div>
-                            <button type="submit" class="w-full bg-accent hover:bg-accentHover text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">Simpan Data Bisnis</button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- TABLE -->
-                <div class="lg:col-span-2">
-                    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h4 class="font-bold text-lg text-primary">Ledger Bisnis</h4>
-                            <div class="flex space-x-2">
-                                <button onclick="filterUmkm('Semua')" class="text-[10px] font-bold px-3 py-1 bg-slate-100 rounded-full hover:bg-slate-200">Semua</button>
-                                <button onclick="filterUmkm('Penjualan')" class="text-[10px] font-bold px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full">Sales</button>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
-                                    <tr>
-                                        <th class="px-4 py-3">Tanggal</th>
-                                        <th class="px-4 py-3">Kontak</th>
-                                        <th class="px-4 py-3">Jenis</th>
-                                        <th class="px-4 py-3">Total</th>
-                                        <th class="px-4 py-3"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="u-ledger" class="divide-y divide-slate-100">
-                                    <!-- Dynamic -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- MODULE 3: SETTINGS -->
-        <section id="tab-settings" class="tab-content">
-            <div class="max-w-2xl mx-auto space-y-6">
-                <div class="bg-white p-8 rounded-3xl shadow-md">
-                    <h4 class="text-xl font-bold mb-6 text-primary border-b pb-4">Data & Keamanan</h4>
-                    
-                    <div class="space-y-6">
-                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                            <div>
-                                <p class="font-bold">Backup Data (Export)</p>
-                                <p class="text-xs text-slate-500">Unduh semua data ke dalam format JSON.</p>
-                            </div>
-                            <button onclick="exportData()" class="px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold">Export</button>
-                        </div>
-
-                        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                            <div>
-                                <p class="font-bold">Pulihkan Data (Import)</p>
-                                <p class="text-xs text-slate-500">Upload file backup MoneyGrizz Anda.</p>
-                            </div>
-                            <label class="px-6 py-2 bg-accent text-white rounded-xl text-sm font-bold cursor-pointer">
-                                Import <input type="file" id="importFile" class="hidden" onchange="importData(event)">
-                            </label>
-                        </div>
-
-                        <div class="flex items-center justify-between p-4 bg-red-50 rounded-2xl">
-                            <div>
-                                <p class="font-bold text-danger">Reset Aplikasi</p>
-                                <p class="text-xs text-red-400">Hapus permanen semua catatan transaksi.</p>
-                            </div>
-                            <button onclick="clearAllData()" class="px-6 py-2 bg-danger text-white rounded-xl text-sm font-bold">Clear All</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-primary p-8 rounded-3xl text-white text-center">
-                    <i class="fas fa-shield-halved text-4xl text-accent mb-4"></i>
-                    <h4 class="text-lg font-bold">Data Lokal & Aman</h4>
-                    <p class="text-slate-400 text-sm mt-2">MoneyGrizz tidak menyimpan data Anda di server. Semua data tersimpan 100% di memori browser perangkat ini.</p>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
+    <!-- ========================================================================= -->
+    <!-- CORE OFFLINE ENGINE / JAVASCRIPT CONTROLLERS -->
+    <!-- ========================================================================= -->
     <script>
-        /** STATE MANAGEMENT **/
-        let personalTransactions = JSON.parse(localStorage.getItem('moneygrizz_p')) || [];
-        let umkmTransactions = JSON.parse(localStorage.getItem('moneygrizz_u')) || [];
-        let chartInstance = null;
+        // Data State Declarations
+        let personalTransactions = [];
+        let umkmTransactions = [];
+        
+        let activePersonalType = 'out'; // default inputting out (pengeluaran)
+        let activeUmkmFilter = 'all'; // default filtered showing all
 
-        /** INITIALIZATION **/
-        window.onload = () => {
-            initDate();
-            switchTab('personal');
-            renderPersonal();
-            renderUmkm();
-            registerSW();
-        };
+        let donutChartInstance = null;
 
-        function initDate() {
-            const now = new Date();
-            document.getElementById('p-date').valueAsDate = now;
-            document.getElementById('live-date').innerText = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            setInterval(() => {
-                const time = new Date();
-                document.getElementById('live-clock').innerText = time.toLocaleTimeString('id-ID');
-            }, 1000);
-        }
+        // Categories Map
+        const expenseCategories = [
+            { id: 'makanan', name: 'Makanan & Minuman', icon: 'fa-utensils', color: '#f59e0b' },
+            { id: 'transportasi', name: 'Transportasi', icon: 'fa-car', color: '#3b82f6' },
+            { id: 'tagihan', name: 'Tagihan & Utilitas', icon: 'fa-file-invoice-dollar', color: '#ef4444' },
+            { id: 'hiburan', name: 'Hiburan & Gaya Hidup', icon: 'fa-gamepad', color: '#ec4899' },
+            { id: 'belanja', name: 'Belanja', icon: 'fa-shopping-bag', color: '#8b5cf6' },
+            { id: 'investasi', name: 'Investasi', icon: 'fa-chart-line', color: '#10b981' },
+            { id: 'lainnya', name: 'Lainnya', icon: 'fa-ellipsis-h', color: '#64748b' }
+        ];
 
-        /** UTILS **/
-        const formatIDR = (num) => {
+        const incomeCategories = [
+            { id: 'gaji', name: 'Gaji / Pendapatan Utama', icon: 'fa-wallet', color: '#10b981' },
+            { id: 'investasi', name: 'Investasi', icon: 'fa-circle-dollar-to-slot', color: '#06b6d4' },
+            { id: 'bisnis', name: 'Bisnis / Sampingan', icon: 'fa-shop', color: '#3b82f6' },
+            { id: 'lainnya', name: 'Lainnya', icon: 'fa-ellipsis-h', color: '#64748b' }
+        ];
+
+        // Format Currency Helper
+        function formatIDR(amount) {
             return new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
-                minimumFractionDigits: 0
-            }).format(num);
-        };
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
 
-        /** NAVIGATION **/
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tabId}`).classList.add('active');
+        // Initialize state defaults on mounting
+        window.addEventListener('DOMContentLoaded', () => {
+            // Setup default date picker to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('p-date').value = today;
+            document.getElementById('u-date').value = today;
+
+            // Load data from LocalStorage
+            loadDatabaseFromLocal();
             
-            // Sidebar styling
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('sidebar-active'));
-            document.getElementById(`btn-${tabId}`).classList.add('sidebar-active');
+            // Build dynamic Category Selection for personal state
+            updatePersonalCategoriesDropdown();
 
-            // Mobile nav styling
-            document.querySelectorAll('.md\\:hidden button').forEach(btn => btn.classList.remove('nav-item-active'));
-            document.getElementById(`m-btn-${tabId}`).classList.add('nav-item-active');
+            // Refresh dashboards
+            renderPersonalModule();
+            renderUmkmModule();
+        });
 
-            // Title change
-            const titles = { 'personal': 'Dashboard Personal', 'umkm': 'Manajemen UMKM', 'settings': 'Pengaturan App' };
-            document.getElementById('view-title').innerText = titles[tabId];
-
-            if(tabId === 'personal') renderPersonal();
-            if(tabId === 'umkm') renderUmkm();
-        }
-
-        /** PERSONAL LOGIC **/
-        document.getElementById('form-personal').onsubmit = (e) => {
-            e.preventDefault();
-            const trx = {
-                id: Date.now(),
-                amount: parseFloat(document.getElementById('p-amount').value),
-                category: document.getElementById('p-category').value,
-                date: document.getElementById('p-date').value,
-                note: document.getElementById('p-note').value || '-'
-            };
-            personalTransactions.unshift(trx);
-            saveAndRenderP();
-            e.target.reset();
-            initDate();
-        };
-
-        function deleteP(id) {
-            personalTransactions = personalTransactions.filter(t => t.id !== id);
-            saveAndRenderP();
-        }
-
-        function saveAndRenderP() {
-            localStorage.setItem('moneygrizz_p', JSON.stringify(personalTransactions));
-            renderPersonal();
-        }
-
-        function renderPersonal() {
-            const list = document.getElementById('p-ledger');
-            list.innerHTML = '';
+        // Toggle active visual sections (Personal vs Business vs Settings)
+        function switchMode(sectionId) {
+            const sections = ['pribadi', 'umkm', 'pengaturan'];
             
-            let income = 0, expense = 0;
-            const categoryTotals = {};
-
-            personalTransactions.forEach(t => {
-                if(t.category === 'Pemasukan') {
-                    income += t.amount;
+            sections.forEach(sec => {
+                const element = document.getElementById(`sec-${sec}`);
+                if (sec === sectionId) {
+                    element.classList.remove('hidden');
                 } else {
-                    expense += t.amount;
-                    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+                    element.classList.add('hidden');
                 }
-
-                const colorClass = t.category === 'Pemasukan' ? 'text-success' : 'text-slate-700';
-                const icon = t.category === 'Pemasukan' ? 'fa-arrow-up' : 'fa-shopping-cart';
-
-                list.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-4 py-4">
-                            <p class="text-xs font-bold text-primary">${new Date(t.date).toLocaleDateString('id-ID')}</p>
-                            <p class="text-[10px] text-slate-400 uppercase truncate max-w-[100px]">${t.note}</p>
-                        </td>
-                        <td class="px-4 py-4">
-                            <span class="text-[10px] bg-slate-100 px-2 py-1 rounded-lg font-medium">${t.category}</span>
-                        </td>
-                        <td class="px-4 py-4 font-bold ${colorClass}">${formatIDR(t.amount)}</td>
-                        <td class="px-4 py-4 text-right">
-                            <button onclick="deleteP(${t.id})" class="text-slate-300 hover:text-danger"><i class="fas fa-trash-alt"></i></button>
-                        </td>
-                    </tr>
-                `;
             });
 
-            document.getElementById('p-total-income').innerText = formatIDR(income);
-            document.getElementById('p-total-expense').innerText = formatIDR(expense);
-            document.getElementById('p-total-balance').innerText = formatIDR(income - expense);
+            // Handle Nav active states
+            const activeSidebarClass = ["bg-grizzly", "text-white"];
+            const inactiveSidebarClass = ["text-slate-400", "hover:text-white", "hover:bg-slate-800"];
 
-            updatePersonalChart(categoryTotals);
+            sections.forEach(sec => {
+                const sideBtn = document.getElementById(`btn-side-${sec}`);
+                const mobBtn = document.getElementById(`btn-mob-${sec}`);
+
+                if (sec === sectionId) {
+                    sideBtn.className = "w-full flex items-center px-3 py-3 rounded-xl transition-all duration-300 font-medium text-left bg-grizzly text-white";
+                    mobBtn.className = `flex flex-col items-center justify-center space-y-1 text-grizzly font-bold flex-1 transition-all duration-300`;
+                } else {
+                    sideBtn.className = "w-full flex items-center px-3 py-3 rounded-xl transition-all duration-300 font-medium text-left text-slate-400 hover:text-white hover:bg-slate-800";
+                    mobBtn.className = `flex flex-col items-center justify-center space-y-1 text-slate-400 opacity-50 hover:opacity-100 flex-1 transition-all duration-300`;
+                }
+            });
+            
+            // In case of chart rendering issue during switching tab, trigger re-render on active
+            if (sectionId === 'pribadi') {
+                renderPersonalChart();
+            }
         }
 
-        function updatePersonalChart(data) {
-            const ctx = document.getElementById('personalChart').getContext('2d');
-            if(chartInstance) chartInstance.destroy();
+        // Database load controller
+        function loadDatabaseFromLocal() {
+            try {
+                const rawPersonal = localStorage.getItem('moneygrizz_personal');
+                const rawUmkm = localStorage.getItem('moneygrizz_umkm');
+
+                personalTransactions = rawPersonal ? JSON.parse(rawPersonal) : [];
+                umkmTransactions = rawUmkm ? JSON.parse(rawUmkm) : [];
+            } catch (err) {
+                console.error("Local database loading error: ", err);
+                personalTransactions = [];
+                umkmTransactions = [];
+            }
+        }
+
+        // Database write controller
+        function syncDatabaseToLocal() {
+            localStorage.setItem('moneygrizz_personal', JSON.stringify(personalTransactions));
+            localStorage.setItem('moneygrizz_umkm', JSON.stringify(umkmTransactions));
+        }
+
+        // ================= SECTION A: PERSONAL CONTROLLERS =================
+
+        // Update categories dropdown based on selection types (Income / Expense)
+        function setPersonalType(type) {
+            activePersonalType = type;
             
-            const labels = Object.keys(data);
-            const values = Object.values(data);
+            const btnPemasukan = document.getElementById('btn-p-pemasukan');
+            const btnPengeluaran = document.getElementById('btn-p-pengeluaran');
 
-            if(labels.length === 0) return;
+            if (type === 'in') {
+                btnPemasukan.className = "py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center transition-all duration-200 border-grizzly text-grizzly bg-amber-500/10 shadow-sm shadow-amber-500/10";
+                btnPengeluaran.className = "py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center transition-all duration-200 border-slate-200 bg-slate-50 text-slate-400";
+            } else {
+                btnPengeluaran.className = "py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center transition-all duration-200 border-grizzly text-grizzly bg-amber-500/10 shadow-sm shadow-amber-500/10";
+                btnPemasukan.className = "py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center transition-all duration-200 border-slate-200 bg-slate-50 text-slate-400";
+            }
 
-            chartInstance = new Chart(ctx, {
+            updatePersonalCategoriesDropdown();
+        }
+
+        // Refresh category select options
+        function updatePersonalCategoriesDropdown() {
+            const dropdown = document.getElementById('p-category');
+            dropdown.innerHTML = '';
+
+            const activeList = activePersonalType === 'in' ? incomeCategories : expenseCategories;
+            activeList.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.name;
+                dropdown.appendChild(opt);
+            });
+        }
+
+        // On Submit Transaction Form saving
+        function savePersonalEntry(event) {
+            event.preventDefault();
+            
+            const amountInput = document.getElementById('p-amount');
+            const categoryInput = document.getElementById('p-category');
+            const dateInput = document.getElementById('p-date');
+            const noteInput = document.getElementById('p-note');
+
+            const newTx = {
+                id: 'p-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                amount: parseFloat(amountInput.value) || 0,
+                type: activePersonalType,
+                category: categoryInput.value,
+                date: dateInput.value,
+                note: noteInput.value.trim() || 'Tanpa keterangan'
+            };
+
+            personalTransactions.unshift(newTx);
+            syncDatabaseToLocal();
+            
+            // Clean visual input states
+            amountInput.value = '';
+            noteInput.value = '';
+            
+            // Re-render personal module components
+            renderPersonalModule();
+        }
+
+        // Delete Personal Transaction
+        function deletePersonalEntry(txId) {
+            personalTransactions = personalTransactions.filter(item => item.id !== txId);
+            syncDatabaseToLocal();
+            renderPersonalModule();
+        }
+
+        // Rendering main PERSONAL dashboard indices
+        function renderPersonalModule() {
+            let totalIn = 0;
+            let totalOut = 0;
+
+            personalTransactions.forEach(tx => {
+                if (tx.type === 'in') {
+                    totalIn += tx.amount;
+                } else {
+                    totalOut += tx.amount;
+                }
+            });
+
+            const totalSaldo = totalIn - totalOut;
+
+            // Update UI Counters
+            document.getElementById('p-total-saldo').textContent = formatIDR(totalSaldo);
+            document.getElementById('p-total-pemasukan').textContent = formatIDR(totalIn);
+            document.getElementById('p-total-pengeluaran').textContent = formatIDR(totalOut);
+            
+            document.getElementById('p-ledger-count').textContent = `${personalTransactions.length} Entri`;
+
+            // Render Table Logs
+            renderPersonalLedgerTable();
+
+            // Render ChartJS distribution
+            renderPersonalChart();
+        }
+
+        // Table Ledger rendering
+        function renderPersonalLedgerTable() {
+            const container = document.getElementById('personal-ledger-body');
+            const emptyState = document.getElementById('p-empty-state');
+            container.innerHTML = '';
+
+            if (personalTransactions.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            personalTransactions.forEach(tx => {
+                // Find category info
+                const catInfo = tx.type === 'in' 
+                    ? incomeCategories.find(c => c.id === tx.category) || { name: 'Lainnya', icon: 'fa-ellipsis-h', color: '#64748b' }
+                    : expenseCategories.find(c => c.id === tx.category) || { name: 'Lainnya', icon: 'fa-ellipsis-h', color: '#64748b' };
+
+                const dateFormatted = new Date(tx.date).toLocaleDateString('id-ID', {
+                    year: 'numeric', month: 'short', day: '2-digit'
+                });
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors duration-150";
+
+                const isIncome = tx.type === 'in';
+                const colorBadgeClass = isIncome ? 'text-emerald-600 bg-emerald-50' : 'text-red-700 bg-red-50';
+                const formattedAmt = `${isIncome ? '+' : '-'} ${formatIDR(tx.amount)}`;
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs" style="background-color: ${catInfo.color}15; color: ${catInfo.color}">
+                                <i class="fa-solid ${catInfo.icon}"></i>
+                            </div>
+                            <span class="font-semibold text-slate-700 text-xs">${catInfo.name}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-slate-600 font-medium">${tx.note}</td>
+                    <td class="px-6 py-4 text-slate-400 font-mono text-xs">${dateFormatted}</td>
+                    <td class="px-6 py-4 text-right font-display font-bold ${isIncome ? 'text-emerald-500' : 'text-red-600'}">${formattedAmt}</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                        <button onclick="deletePersonalEntry('${tx.id}')" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100/50 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all duration-150">
+                            <i class="fa-regular fa-trash-can mr-1"></i>Hapus
+                        </button>
+                    </td>
+                `;
+
+                container.appendChild(tr);
+            });
+        }
+
+        // Render responsive chart Category Analytics breakdown
+        function renderPersonalChart() {
+            const chartCanvas = document.getElementById('chart-personal-expenses');
+            const emptyMsg = document.getElementById('chart-personal-empty-msg');
+
+            // Calculate category aggregation for EXPENSES only
+            const categorizedExpenses = {};
+            expenseCategories.forEach(cat => {
+                categorizedExpenses[cat.id] = 0;
+            });
+
+            let totalExp = 0;
+            personalTransactions.filter(item => item.type === 'out').forEach(tx => {
+                const catId = tx.category;
+                if (categorizedExpenses[catId] !== undefined) {
+                    categorizedExpenses[catId] += tx.amount;
+                } else {
+                    categorizedExpenses['lainnya'] = (categorizedExpenses['lainnya'] || 0) + tx.amount;
+                }
+                totalExp += tx.amount;
+            });
+
+            // If empty, hide chart show empty message 
+            if (totalExp === 0) {
+                emptyMsg.classList.remove('hidden');
+                if (donutChartInstance) {
+                    donutChartInstance.destroy();
+                    donutChartInstance = null;
+                }
+                return;
+            }
+
+            emptyMsg.classList.add('hidden');
+
+            const labels = [];
+            const dataPoints = [];
+            const backgroundColors = [];
+
+            expenseCategories.forEach(cat => {
+                const amt = categorizedExpenses[cat.id];
+                if (amt > 0) {
+                    labels.push(cat.name);
+                    dataPoints.push(amt);
+                    backgroundColors.push(cat.color);
+                }
+            });
+
+            // Re-render chartjs
+            if (donutChartInstance) {
+                donutChartInstance.destroy();
+            }
+
+            donutChartInstance = new Chart(chartCanvas, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
                     datasets: [{
-                        data: values,
-                        backgroundColor: ['#d97706', '#0f172a', '#10b981', '#b91c1c', '#6366f1', '#ec4899', '#94a3b8'],
-                        borderWidth: 0
+                        data: dataPoints,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 2,
+                        hoverOffset: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    family: 'Plus Jakarta Sans',
+                                    size: 9,
+                                    weight: 'bold'
+                                },
+                                boxWidth: 10,
+                                usePointStyle: true,
+                                padding: 8
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw || 0;
+                                    const percent = ((value / totalExp) * 100).toFixed(1);
+                                    return ` ${context.label}: ${formatIDR(value)} (${percent}%)`;
+                                }
+                            }
+                        }
                     },
                     cutout: '70%'
                 }
             });
         }
 
-        /** UMKM LOGIC **/
-        document.getElementById('form-umkm').onsubmit = (e) => {
-            e.preventDefault();
-            const trx = {
-                id: Date.now(),
-                amount: parseFloat(document.getElementById('u-amount').value),
-                type: document.getElementById('u-type').value,
-                client: document.getElementById('u-client').value || 'Umum',
-                note: document.getElementById('u-note').value || '-',
-                date: new Date().toISOString().split('T')[0]
+
+        // ================= SECTION B: UMKM BUSINESS CONTROLLERS =================
+
+        // Business entry saving
+        function saveUmkmEntry(event) {
+            event.preventDefault();
+
+            const typeSelect = document.getElementById('u-type');
+            const amountInput = document.getElementById('u-amount');
+            const dateInput = document.getElementById('u-date');
+            const relationInput = document.getElementById('u-relation');
+            const noteInput = document.getElementById('u-note');
+
+            const entry = {
+                id: 'u-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                type: typeSelect.value, // omset, hpp, operasional, lain-lain
+                amount: parseFloat(amountInput.value) || 0,
+                date: dateInput.value,
+                relation: relationInput.value.trim() || '-',
+                note: noteInput.value.trim() || 'Tanpa keterangan'
             };
-            umkmTransactions.unshift(trx);
-            saveAndRenderU();
-            e.target.reset();
-        };
 
-        function saveAndRenderU() {
-            localStorage.setItem('moneygrizz_u', JSON.stringify(umkmTransactions));
-            renderUmkm();
+            umkmTransactions.unshift(entry);
+            syncDatabaseToLocal();
+
+            // Clear visual values inputs
+            amountInput.value = '';
+            relationInput.value = '';
+            noteInput.value = '';
+
+            renderUmkmModule();
         }
 
-        function deleteU(id) {
-            umkmTransactions = umkmTransactions.filter(t => t.id !== id);
-            saveAndRenderU();
+        // Delete Business Entry
+        function deleteUmkmEntry(txId) {
+            umkmTransactions = umkmTransactions.filter(item => item.id !== txId);
+            syncDatabaseToLocal();
+            renderUmkmModule();
         }
 
-        function renderUmkm(filter = 'Semua') {
-            const list = document.getElementById('u-ledger');
-            list.innerHTML = '';
+        // Filter business view table
+        function setUmkmFilter(filter) {
+            activeUmkmFilter = filter;
             
-            let revenue = 0, hpp = 0, ops = 0;
-
-            umkmTransactions.forEach(t => {
-                if(t.type === 'Penjualan') revenue += t.amount;
-                if(t.type === 'HPP') hpp += t.amount;
-                if(t.type === 'Operasional') ops += t.amount;
-
-                if(filter !== 'Semua' && t.type !== filter) return;
-
-                const typeColors = {
-                    'Penjualan': 'bg-emerald-100 text-emerald-700',
-                    'HPP': 'bg-slate-100 text-slate-700',
-                    'Operasional': 'bg-red-100 text-red-700'
-                };
-
-                list.innerHTML += `
-                    <tr class="text-xs">
-                        <td class="px-4 py-4 font-medium">${t.date}</td>
-                        <td class="px-4 py-4 font-bold text-primary">${t.client}</td>
-                        <td class="px-4 py-4"><span class="px-2 py-1 rounded-full ${typeColors[t.type] || 'bg-gray-100'}">${t.type}</span></td>
-                        <td class="px-4 py-4 font-bold">${formatIDR(t.amount)}</td>
-                        <td class="px-4 py-4 text-right">
-                            <button onclick="deleteU(${t.id})" class="text-slate-300 hover:text-danger"><i class="fas fa-trash-alt"></i></button>
-                        </td>
-                    </tr>
-                `;
+            // Set indicator classes
+            const filters = ['all', 'omset', 'hpp', 'operasional'];
+            filters.forEach(f => {
+                const btn = document.getElementById(`btn-u-filter-${f}`);
+                if (f === filter) {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-grizzly text-white shadow-sm";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 text-slate-500 hover:text-slate-800";
+                }
             });
 
-            const profit = revenue - (hpp + ops);
-            document.getElementById('u-total-revenue').innerText = formatIDR(revenue);
-            document.getElementById('u-total-hpp').innerText = formatIDR(hpp);
-            document.getElementById('u-total-ops').innerText = formatIDR(ops);
-            document.getElementById('u-total-profit').innerText = formatIDR(profit);
+            renderUmkmLedgerTable();
+        }
 
+        // Render entire business modules dashboard parameters
+        function renderUmkmModule() {
+            let totalOmset = 0;
+            let totalHpp = 0;
+            let totalOperasional = 0;
+
+            umkmTransactions.forEach(entry => {
+                if (entry.type === 'omset') {
+                    totalOmset += entry.amount;
+                } else if (entry.type === 'hpp') {
+                    totalHpp += entry.amount;
+                } else if (entry.type === 'operasional' || entry.type === 'lain-lain') {
+                    totalOperasional += entry.amount;
+                }
+            });
+
+            const netProfit = totalOmset - (totalHpp + totalOperasional);
+
+            // Print UI Counters
+            document.getElementById('u-total-omset').textContent = formatIDR(totalOmset);
+            document.getElementById('u-total-hpp').textContent = formatIDR(totalHpp);
+            document.getElementById('u-total-operasional').textContent = formatIDR(totalOperasional);
+            document.getElementById('u-total-net').textContent = formatIDR(netProfit);
+
+            // Control health status badges
             const badge = document.getElementById('u-health-badge');
-            if(profit > 0) {
-                badge.innerText = 'SEHAT';
-                badge.className = 'absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700';
-            } else if(profit < 0) {
-                badge.innerText = 'EVALUASI';
-                badge.className = 'absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700';
+            if (netProfit >= 0) {
+                badge.className = "px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded text-[9.5px] font-bold uppercase tracking-wider";
+                badge.textContent = "Sehat";
+            } else {
+                badge.className = "px-2 py-0.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded text-[9.5px] font-bold uppercase tracking-wider";
+                badge.textContent = "Evaluasi";
             }
+
+            renderUmkmLedgerTable();
         }
 
-        function filterUmkm(type) {
-            renderUmkm(type);
+        // Render Business Ledger Table matching filter conditions
+        function renderUmkmLedgerTable() {
+            const container = document.getElementById('umkm-ledger-body');
+            const emptyState = document.getElementById('u-empty-state');
+            container.innerHTML = '';
+
+            let filteredList = umkmTransactions;
+            if (activeUmkmFilter !== 'all') {
+                filteredList = umkmTransactions.filter(item => item.type === activeUmkmFilter);
+            }
+
+            if (filteredList.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filteredList.forEach(entry => {
+                let badgeText = '';
+                let badgeStyle = '';
+                let valColor = '';
+                let symbol = '';
+
+                switch (entry.type) {
+                    case 'omset':
+                        badgeText = 'Penjualan';
+                        badgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                        valColor = 'text-emerald-600';
+                        symbol = '+';
+                        break;
+                    case 'hpp':
+                        badgeText = 'Belanja Stok';
+                        badgeStyle = 'bg-amber-50 text-amber-800 border-amber-100';
+                        valColor = 'text-amber-700';
+                        symbol = '-';
+                        break;
+                    case 'operasional':
+                        badgeText = 'Operasional';
+                        badgeStyle = 'bg-red-50 text-red-700 border-red-100';
+                        valColor = 'text-red-600';
+                        symbol = '-';
+                        break;
+                    case 'lain-lain':
+                        badgeText = 'Lain-lain';
+                        badgeStyle = 'bg-slate-100 text-slate-700 border-slate-200';
+                        valColor = 'text-slate-600';
+                        symbol = '-';
+                        break;
+                }
+
+                const dateFormatted = new Date(entry.date).toLocaleDateString('id-ID', {
+                    year: 'numeric', month: 'short', day: '2-digit'
+                });
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors duration-150";
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2.5 py-1 text-[11px] font-bold border rounded-lg ${badgeStyle}">${badgeText}</span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-600 font-medium">${entry.note}</td>
+                    <td class="px-6 py-4 text-slate-500 font-medium">
+                        <span class="flex items-center space-x-1">
+                            <i class="fa-solid fa-user-tag text-slate-300 text-xs"></i>
+                            <span>${entry.relation || '-'}</span>
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-400 font-mono text-xs">${dateFormatted}</td>
+                    <td class="px-6 py-4 text-right font-display font-bold ${valColor}">${symbol} ${formatIDR(entry.amount)}</td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                        <button onclick="deleteUmkmEntry('${entry.id}')" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100/50 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all duration-150">
+                            <i class="fa-regular fa-trash-can mr-1"></i>Hapus
+                        </button>
+                    </td>
+                `;
+
+                container.appendChild(tr);
+            });
         }
 
-        /** DATA SETTINGS **/
-        function exportData() {
-            const data = {
+
+        // ================= SECTION C: SYSTEM UTILITIES & DATABASE TOOLS =================
+
+        // EXPORT DATA (Generate downloadable Backup File)
+        function exportFullDatabase() {
+            const wrapDb = {
+                version: "1.0.0",
+                exportedAt: new Date().toISOString(),
                 personal: personalTransactions,
-                umkm: umkmTransactions,
-                exportDate: new Date().toISOString()
+                umkm: umkmTransactions
             };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `moneygrizz_backup_${Date.now()}.json`;
-            a.click();
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(wrapDb, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `moneygrizz_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchorElem);
+            dlAnchorElem.click();
+            document.body.removeChild(dlAnchorElem);
+            
+            // Notify native wrapper or just show standard alert
+            alert("Berhasil! Database cadangan finansial MoneyGrizz telah diunduh ke file JSON lokal Anda.");
         }
 
-        function importData(event) {
+        // IMPORT DATA (Parse & Restore financial transactions from local file upload)
+        function importFullDatabase(event) {
             const file = event.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = function(e) {
                 try {
-                    const imported = JSON.parse(e.target.result);
-                    if(confirm("Impor data akan menggabungkan data yang ada. Lanjutkan?")) {
-                        personalTransactions = [...imported.personal, ...personalTransactions];
-                        umkmTransactions = [...imported.umkm, ...umkmTransactions];
-                        saveAndRenderP();
-                        saveAndRenderU();
-                        alert("Data berhasil diimpor!");
+                    const parsed = JSON.parse(e.target.result);
+                    
+                    if (parsed && (Array.isArray(parsed.personal) || Array.isArray(parsed.umkm))) {
+                        personalTransactions = parsed.personal || [];
+                        umkmTransactions = parsed.umkm || [];
+
+                        syncDatabaseToLocal();
+                        
+                        // Force refresh UI modules components
+                        renderPersonalModule();
+                        renderUmkmModule();
+
+                        alert("Restorasi Berhasil! Seluruh data transaksi personal & UMKM Anda telah berhasil dicadangkan kembali.");
+                        switchMode('pribadi');
+                    } else {
+                        alert("Format File Salah! Berkas JSON cadangan yang Anda selaraskan tidak sinkron dengan struktur MoneyGrizz.");
                     }
                 } catch (err) {
-                    alert("Gagal membaca file!");
+                    alert("Gagal memproses file cadangan karena format dokumen rusak.");
                 }
             };
             reader.readAsText(file);
         }
 
-        function clearAllData() {
-            if(confirm("PERINGATAN: Semua data akan dihapus permanen!")) {
-                localStorage.clear();
-                location.reload();
+        // CLEAR DATABASE
+        function clearFullDatabase() {
+            const confirmTxt = prompt("Apakah Anda yakin ingin menyetel ulang semua data? Tindakan ini akan menghapus semua buku tabungan pribadi dan catatan warung usaha secara permanen!\n\nKetik 'SETUJU' untuk melanjutkan:");
+            if (confirmTxt === 'SETUJU') {
+                localStorage.removeItem('moneygrizz_personal');
+                localStorage.removeItem('moneygrizz_umkm');
+                
+                personalTransactions = [];
+                umkmTransactions = [];
+
+                renderPersonalModule();
+                renderUmkmModule();
+
+                alert("Aplikasi Berhasil Disetel Ulang!");
+                switchMode('pribadi');
+            } else {
+                alert("Tindakan dibatalkan.");
             }
         }
-
-        /** PWA SERVICE WORKER **/
-        function registerSW() {
-            if ('serviceWorker' in navigator) {
-                const swCode = `
-                    const CACHE_NAME = 'moneygrizz-v1';
-                    const ASSETS = ['./', './index.html'];
-                    self.addEventListener('install', e => {
-                        e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
-                    });
-                    self.addEventListener('fetch', e => {
-                        e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
-                    });
-                `;
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const workerUrl = URL.createObjectURL(blob);
-                navigator.serviceWorker.register(workerUrl).catch(err => console.log('SW failed', err));
-            }
-        }
-    </script>
-
-    <!-- MANIFEST JSON (Inline Concept) -->
-    <script type="application/json" id="manifest">
-    {
-        "name": "MoneyGrizz Finance",
-        "short_name": "MoneyGrizz",
-        "start_url": ".",
-        "display": "standalone",
-        "background_color": "#0f172a",
-        "theme_color": "#0f172a",
-        "icons": [
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/2454/2454282.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
-        ]
-    }
     </script>
 </body>
 </html>
